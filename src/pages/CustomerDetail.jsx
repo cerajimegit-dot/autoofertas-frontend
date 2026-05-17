@@ -213,7 +213,8 @@ function CustomerDetail() {
                                     <th className="text-left py-2">Vehículo</th>
                                     <th className="text-right py-2">Total</th>
                                     <th className="text-left py-2">Pago</th>
-                                    <th className="text-left py-2">Estado</th>
+                                    <th className="text-left py-2">Contrato</th>
+                                    <th className="text-left py-2">Cobranza</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -239,6 +240,9 @@ function CustomerDetail() {
                                         <td className="py-2 text-right font-semibold">{formatGs(s.total_price)}</td>
                                         <td className="py-2 text-xs">{s.payment_form_name || '-'}</td>
                                         <td className="py-2">{saleStatusBadge(s.status, s.status_display)}</td>
+                                        <td className="py-2">
+                                            {collectionStatusBadge(s.collection_status, s.collection_status_display, s.collection_summary)}
+                                        </td>
                                     </tr>
                                 ))}
                             </tbody>

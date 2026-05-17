@@ -427,7 +427,8 @@ function Sales() {
                                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">Vehículo</th>
                                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">Total</th>
                                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">Pago</th>
-                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">Estado</th>
+                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">Contrato</th>
+                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">Cobranza</th>
                                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">Acciones</th>
                             </tr>
                         </thead>
@@ -503,6 +504,18 @@ function Sales() {
                                         </td>
                                         <td className="px-4 py-3">
                                             {saleStatusBadge(sale.status, sale.status_display)}
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            {collectionStatusBadge(
+                                                sale.collection_status,
+                                                sale.collection_status_display,
+                                                sale.collection_summary,
+                                            )}
+                                            {sale.collection_summary?.balance_pending > 0 && (
+                                                <div className="text-xs text-gray-500 mt-1">
+                                                    Saldo: {formatGs(sale.collection_summary.balance_pending)}
+                                                </div>
+                                            )}
                                         </td>
                                         <td className="px-4 py-3">
                                             <div className="flex gap-2">
