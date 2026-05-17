@@ -358,7 +358,7 @@ function Sales() {
                             <button key={r.label} type="button"
                                 onClick={() => { setDateFrom(r.from); setDateTo(r.to); }}
                                 className={`px-3 py-1.5 text-xs border rounded hover:bg-gray-100 ${
-                                    dateFrom === r.from && dateTo === r.to ? 'bg-blue-100 border-blue-300' : ''
+                                    dateFrom === r.from && dateTo === r.to ? 'bg-gray-100 border-gray-400' : ''
                                 }`}>
                                 {r.label}
                             </button>
@@ -401,13 +401,13 @@ function Sales() {
                     value={search}
                     onChange={e => setSearch(e.target.value)}
                     placeholder="Buscar por número, cliente o vehículo..."
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
                 />
             </div>
 
             {/* Aviso de filtro de sucursal activo (para no confundirse al ver pocos resultados) */}
             {selectedBranch && branches.length > 1 && (
-                <div className="bg-blue-50 border border-blue-200 text-blue-800 text-sm rounded p-2 mb-3">
+                <div className="bg-slate-50 border border-slate-200 text-slate-800 text-sm rounded p-2 mb-3">
                     Mostrando <strong>solamente</strong> ventas de <strong>{branches.find(b => String(b.id) === String(selectedBranch))?.name}</strong>.
                     {' '}Para ver todas, cambiá el selector de sucursal a "Todas" arriba.
                 </div>
@@ -544,7 +544,7 @@ function Sales() {
                                 value={saleNumber}
                                 onChange={e => setSaleNumber(e.target.value)}
                                 placeholder="Ej: CM123/25"
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 font-mono"
                             />
                             {saleNumber.toUpperCase().startsWith('MIG') && (
                                 <p className="text-xs text-yellow-700 mt-1">
@@ -562,7 +562,7 @@ function Sales() {
                                 type="date"
                                 value={saleDate}
                                 onChange={e => setSaleDate(e.target.value)}
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
                             />
                             <p className="text-xs text-gray-500 mt-1">
                                 Poné la fecha real en la que se realizó la venta (no la fecha de registro).
@@ -616,7 +616,7 @@ function Sales() {
                                 min="0"
                                 value={downPayment}
                                 onChange={e => setDownPayment(e.target.value)}
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
                             />
                             <p className="text-xs text-gray-500 mt-1">
                                 Monto entregado al firmar (dejar 0 si no aplica).
@@ -1249,7 +1249,7 @@ function SaleCreateModal({ customers, vehicles, brands, paymentForms, onClose, o
                                 className="w-full px-3 py-2 border rounded" />
                         </Field>
                     </Grid>
-                    <div className="mt-3 p-3 bg-blue-50 rounded text-sm">
+                    <div className="mt-3 p-3 bg-slate-50 rounded text-sm">
                         <div className="flex justify-between">
                             <span>Total de la venta:</span>
                             <strong>{formatGs(totalPrice)}</strong>
@@ -1654,8 +1654,8 @@ function SearchSelect({
                                 <div
                                     key={item.id}
                                     onClick={() => select(item)}
-                                    className={`px-3 py-2 text-sm hover:bg-blue-50 cursor-pointer ${
-                                        String(item.id) === String(value) ? 'bg-blue-100 font-medium' : ''
+                                    className={`px-3 py-2 text-sm hover:bg-gray-100 cursor-pointer ${
+                                        String(item.id) === String(value) ? 'bg-gray-200 font-medium' : ''
                                     }`}
                                 >
                                     {getLabel(item)}

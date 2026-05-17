@@ -68,7 +68,7 @@ function FormField({
 
     const showError = touched && error;
     const baseInputClass = `w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 transition ${
-        showError ? 'border-red-400 focus:ring-red-300' : 'border-gray-300 focus:ring-blue-300'
+        showError ? 'border-red-400 focus:ring-red-300' : 'border-gray-300 focus:ring-red-300'
     } ${disabled ? 'bg-gray-100 cursor-not-allowed' : ''} ${inputClassName}`;
 
     return (

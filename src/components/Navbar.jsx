@@ -51,7 +51,7 @@ function Navbar({ onLogout }) {
                                 className="h-10 w-10 rounded object-contain bg-white border border-gray-200 flex-shrink-0"
                                 onError={(e) => { e.currentTarget.style.display = 'none'; }}
                             />
-                            <h1 className="text-lg sm:text-xl font-bold text-blue-600 truncate">
+                            <h1 className="text-lg sm:text-xl font-bold text-red-600 truncate">
                                 <span className="hidden sm:inline">
                                     {user?.enterprise_name || 'AUTO OFERTAS'}
                                 </span>
@@ -78,7 +78,7 @@ function Navbar({ onLogout }) {
                             {user?.first_name} {user?.last_name}
                         </span>
                         <button onClick={() => setMenuOpen(!menuOpen)}
-                            className="w-9 h-9 rounded-full bg-blue-600 text-white flex items-center justify-center hover:bg-blue-700 transition"
+                            className="w-9 h-9 rounded-full bg-red-600 text-white flex items-center justify-center hover:bg-red-700 transition"
                             aria-label="Menú de usuario">
                             {initial}
                         </button>

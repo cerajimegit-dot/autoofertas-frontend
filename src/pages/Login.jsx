@@ -31,7 +31,7 @@ function Login() {
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-blue-600 to-blue-800 flex items-center justify-center px-4">
+        <div className="min-h-screen bg-gradient-to-br from-red-600 to-red-800 flex items-center justify-center px-4">
             <div className="w-full max-w-md">
                 {/* Header con logo de AUTO OFERTAS */}
                 <div className="text-center mb-8">
@@ -47,7 +47,7 @@ function Login() {
                         />
                     </div>
                     <h1 className="text-3xl sm:text-4xl font-bold text-white mb-2">AUTO OFERTAS</h1>
-                    <p className="text-blue-100 text-sm">Sistema de gestión de ventas y cobranzas</p>
+                    <p className="text-red-100 text-sm">Sistema de gestión de ventas y cobranzas</p>
                 </div>
 
                 {/* Form Card */}
@@ -72,7 +72,7 @@ function Login() {
                                 onChange={(e) => setUsername(e.target.value)}
                                 autoFocus
                                 autoComplete="username"
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
                                 required
                             />
                         </div>
@@ -88,7 +88,7 @@ function Login() {
                                 onChange={(e) => setPassword(e.target.value)}
                                 autoComplete="current-password"
                                 placeholder="••••••••"
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
                                 required
                             />
                         </div>
@@ -107,7 +107,7 @@ function Login() {
                 </Card>
 
                 {/* Footer */}
-                <p className="text-center text-blue-100 text-xs mt-6">
+                <p className="text-center text-red-100 text-xs mt-6">
                     Si olvidaste tu contraseña, pedí a la administradora que la resetee.
                 </p>
             </div>

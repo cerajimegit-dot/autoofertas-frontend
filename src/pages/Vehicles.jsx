@@ -169,7 +169,7 @@ function Vehicles() {
 
             {/* Aviso de filtro de sucursal */}
             {selectedBranch && branches.length > 1 && (
-                <div className="bg-blue-50 border border-blue-200 text-blue-800 text-sm rounded p-2 mb-3">
+                <div className="bg-slate-50 border border-slate-200 text-slate-800 text-sm rounded p-2 mb-3">
                     Mostrando sólo vehículos de <strong>{branches.find(b => String(b.id) === String(selectedBranch))?.name}</strong>.
                     {' '}Cambiá el selector arriba a "Todas" para ver el stock global.
                 </div>
@@ -205,7 +205,7 @@ function Vehicles() {
                         value={search}
                         onChange={e => setSearch(e.target.value)}
                         placeholder="Buscar por VIN, marca, modelo, color, patente, año..."
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
                     />
 
                     {/* Chips de estado */}
@@ -221,7 +221,7 @@ function Vehicles() {
                                 onClick={() => setStateFilter(key)}
                                 className={`px-3 py-1.5 text-sm rounded-full border ${
                                     stateFilter === key
-                                        ? 'bg-blue-600 text-white border-blue-600'
+                                        ? 'bg-red-600 text-white border-red-600'
                                         : 'bg-white text-gray-700 hover:bg-gray-50'
                                 }`}>
                                 {label} ({byState[key] || 0})

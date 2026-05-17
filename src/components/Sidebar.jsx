@@ -76,7 +76,7 @@ function Sidebar({ className = '' }) {
                                     to={item.path}
                                     className={`
                                         flex items-center gap-3 p-3 rounded-lg transition-colors text-sm font-medium
-                                        ${active ? 'bg-blue-600 text-white' : 'hover:bg-gray-800'}
+                                        ${active ? 'bg-red-600 text-white' : 'hover:bg-gray-800'}
                                         ${item.adminOnly ? 'border-t border-gray-700 mt-2 pt-3' : ''}
                                     `}
                                 >

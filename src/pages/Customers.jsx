@@ -137,7 +137,7 @@ function Customers() {
                     value={search}
                     onChange={e => setSearch(e.target.value)}
                     placeholder="Buscar por nombre, documento, email o teléfono..."
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
                 />
             </div>
 
@@ -164,7 +164,7 @@ function Customers() {
                                     <tr key={customer.id} className={`border-b hover:bg-gray-50 ${auto ? 'bg-yellow-50/30' : ''}`}>
                                         <td className="px-4 py-3 font-medium">
                                             <Link to={`/customers/${customer.id}`}
-                                                className="text-blue-700 hover:underline">
+                                                className="text-red-700 hover:underline">
                                                 {nombre}
                                             </Link>
                                         </td>

@@ -159,7 +159,7 @@ function SearchSection({ title, items, renderItem, onClick }) {
             <div className="px-4 py-2 bg-gray-50 text-xs font-semibold text-gray-600 uppercase">{title}</div>
             {items.map((item, i) => (
                 <button key={i} onClick={onClick}
-                    className="block w-full text-left px-4 py-2 text-sm hover:bg-blue-50 truncate">
+                    className="block w-full text-left px-4 py-2 text-sm hover:bg-red-50 truncate">
                     {renderItem(item)}
                 </button>
             ))}

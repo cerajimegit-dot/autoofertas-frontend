@@ -133,7 +133,7 @@ function Quotas() {
                 <input type="text" value={search}
                     onChange={e => setSearch(e.target.value)}
                     placeholder="Buscar por cliente, número de venta o plan..."
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500" />
             </div>
 
             {/* Tabla de cuotas */}
@@ -272,7 +272,7 @@ function PayQuotaModal({ quota, onClose, onPaid }) {
                     <button onClick={onClose} className="text-gray-500 hover:text-gray-700 text-2xl leading-none">×</button>
                 </div>
                 <div className="p-4 space-y-3">
-                    <div className="bg-blue-50 p-3 rounded text-sm">
+                    <div className="bg-slate-50 p-3 rounded text-sm">
                         <div><strong>Venta:</strong> {quota.sale_number || '(sin nº)'}</div>
                         <div><strong>Cliente:</strong> {quota.customer_name || '(sin cliente)'}</div>
                         <div><strong>Cuota N°:</strong> {quota.quota_number}{quota.total_plan ? `/${quota.total_plan}` : ''}</div>
@@ -300,7 +300,7 @@ function PayQuotaModal({ quota, onClose, onPaid }) {
                                 ['CJ', 'Caja'],
                                 ['AC', 'Acuerdo'],
                             ].map(([k, l]) => (
-                                <label key={k} className={`flex items-center gap-2 p-2 rounded border cursor-pointer text-sm ${forma === k ? 'border-blue-600 bg-blue-50' : 'border-gray-300'}`}>
+                                <label key={k} className={`flex items-center gap-2 p-2 rounded border cursor-pointer text-sm ${forma === k ? 'border-red-600 bg-red-50' : 'border-gray-300'}`}>
                                     <input type="radio" name="forma" value={k}
                                         checked={forma === k}
                                         onChange={() => setForma(k)} />

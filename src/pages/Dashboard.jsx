@@ -159,7 +159,7 @@ function Dashboard() {
             {/* KPIs */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
                 <Card title="Vehículos">
-                    <div className="text-3xl font-bold text-blue-600">{formatInt(s.total_vehicles)}</div>
+                    <div className="text-3xl font-bold text-red-600">{formatInt(s.total_vehicles)}</div>
                     <p className="text-gray-600 text-sm">{formatInt(s.inventario_disponible)} disponibles</p>
                 </Card>
                 <Card title="Ventas del período">
@@ -179,7 +179,7 @@ function Dashboard() {
             {/* Ratios gerenciales */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                 <MiniStat label="Ratio de cobranza" value={`${a.ratio_cobranza_pct ?? 0}%`}
-                    color="text-blue-600"
+                    color="text-red-600"
                     hint={`Cobrado / (cobrado + pendiente)`} />
                 <MiniStat label="Morosidad" value={`${a.ratio_morosidad_pct ?? 0}%`}
                     color="text-orange-600"
@@ -316,7 +316,7 @@ function Dashboard() {
                                 <tr key={m.customer_id} className="border-b">
                                     <td className="py-1 font-medium">
                                         <RouterLink to={`/customers/${m.customer_id}`}
-                                            className="text-blue-700 hover:underline">
+                                            className="text-red-700 hover:underline">
                                             {m.nombre}
                                         </RouterLink>
                                     </td>
@@ -359,7 +359,7 @@ function Dashboard() {
                                         {idx+1}.{' '}
                                         {c.customer_id
                                             ? <RouterLink to={`/customers/${c.customer_id}`}
-                                                  className="text-blue-700 hover:underline">{c.cliente}</RouterLink>
+                                                  className="text-red-700 hover:underline">{c.cliente}</RouterLink>
                                             : c.cliente}
                                     </span>
                                     <span className="font-semibold">{formatGs(c.total_gastado)} · {c.numero_compras}x</span>
@@ -459,7 +459,7 @@ function DataQualityPanel({ data }) {
                     </p>
                 </div>
                 <button onClick={() => setOpen(o => !o)}
-                    className="text-sm text-blue-600 hover:underline">
+                    className="text-sm text-red-600 hover:underline">
                     {open ? 'Ver menos' : `Ver todas (${checks.length})`}
                 </button>
             </div>

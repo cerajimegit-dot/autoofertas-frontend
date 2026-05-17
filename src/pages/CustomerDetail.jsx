@@ -176,7 +176,7 @@ function CustomerDetail() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
                 <Card>
                     <div className="text-xs text-gray-500 uppercase">Comprado</div>
-                    <div className="text-2xl font-bold text-blue-700 mt-1">{formatGs(summary.tot_comprado)}</div>
+                    <div className="text-2xl font-bold text-red-700 mt-1">{formatGs(summary.tot_comprado)}</div>
                     <div className="text-xs text-gray-500 mt-1">{sales.length} venta(s)</div>
                 </Card>
                 <Card>

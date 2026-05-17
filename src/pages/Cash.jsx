@@ -105,9 +105,11 @@ function Cash() {
 
     function kindBadgeClass(k, direction) {
         if (direction === 'out') return 'bg-red-100 text-red-800';
+        // Tipos de ingreso — colores distintos del rojo de egreso para no confundir
+        // (con el tema rojo de la marca, cualquier "rojo" se lee como alerta).
         if (k === 'cobro_cuota')    return 'bg-green-100 text-green-800';
         if (k === 'venta_contado')  return 'bg-emerald-100 text-emerald-800';
-        if (k === 'seña_credito')   return 'bg-blue-100 text-blue-800';
+        if (k === 'seña_credito')   return 'bg-amber-100 text-amber-800';
         if (k === 'pago_a_cuenta')  return 'bg-cyan-100 text-cyan-800';
         return 'bg-gray-100 text-gray-800';
     }
@@ -150,7 +152,7 @@ function Cash() {
                             <button key={r.label} type="button"
                                 onClick={() => { setDateFrom(r.from); setDateTo(r.to); }}
                                 className={`px-3 py-1.5 text-xs border rounded hover:bg-gray-100 ${
-                                    dateFrom === r.from && dateTo === r.to ? 'bg-blue-100 border-blue-300' : ''
+                                    dateFrom === r.from && dateTo === r.to ? 'bg-gray-100 border-gray-400' : ''
                                 }`}>
                                 {r.label}
                             </button>

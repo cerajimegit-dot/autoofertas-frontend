@@ -97,7 +97,7 @@ function ToastItem({ toast, onDismiss }) {
         success: { bg: 'bg-green-50',  border: 'border-green-300',  text: 'text-green-900',  icon: '✓' },
         error:   { bg: 'bg-red-50',    border: 'border-red-300',    text: 'text-red-900',    icon: '✕' },
         warning: { bg: 'bg-yellow-50', border: 'border-yellow-300', text: 'text-yellow-900', icon: '⚠' },
-        info:    { bg: 'bg-blue-50',   border: 'border-blue-300',   text: 'text-blue-900',   icon: 'ℹ' },
+        info:    { bg: 'bg-sky-50',   border: 'border-sky-300',   text: 'text-sky-900',   icon: 'ℹ' },
         confirm: { bg: 'bg-gray-50',   border: 'border-gray-400',   text: 'text-gray-900',   icon: '?' },
     }[toast.type] || { bg: 'bg-white', border: 'border-gray-200', text: 'text-gray-900', icon: '' };
 
@@ -121,7 +121,7 @@ function ToastItem({ toast, onDismiss }) {
                     {toast.type === 'confirm' && (
                         <div className="flex gap-2 mt-2">
                             <button onClick={toast.onConfirm}
-                                className="px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700">
+                                className="px-3 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700">
                                 {toast.confirmText}
                             </button>
                             <button onClick={toast.onCancel}
