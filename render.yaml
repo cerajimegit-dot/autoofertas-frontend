@@ -1,12 +1,12 @@
 # Render Blueprint para el frontend (static site)
 # El proyecto es no-build (Babel standalone + Tailwind CDN), entonces no hay paso de build.
+# Los static sites:
+#   - se sirven desde un CDN global (no admite `region`)
+#   - son gratis siempre (no admite `plan: free` — Render lo rechaza explícitamente)
 services:
   - type: web
     name: playa-frontend
-    env: static
-    # Los static sites de Render se sirven desde un CDN global (no admite
-    # `region`). El backend sí está en virginia para latencia con Supabase.
-    plan: free
+    runtime: static
     buildCommand: ""
     staticPublishPath: .
     routes:
