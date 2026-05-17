@@ -1,0 +1,18 @@
+# Render Blueprint para el frontend (static site)
+# El proyecto es no-build (Babel standalone + Tailwind CDN), entonces no hay paso de build.
+services:
+  - type: web
+    name: playa-frontend
+    env: static
+    region: oregon
+    plan: free
+    buildCommand: ""
+    staticPublishPath: .
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    headers:
+      - path: /*
+        name: Cache-Control
+        value: no-cache, no-store, must-revalidate

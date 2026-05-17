@@ -1,0 +1,27 @@
+# Logs
+*.log
+npm-debug.log*
+
+# Lockfiles del editor
+~$*
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Node (si en el futuro hay build)
+node_modules/
+dist/
+build/
+
+# Local
+.env
+.env.local
+
+# Python (server.py compila .pyc)
+__pycache__/
+*.pyc
