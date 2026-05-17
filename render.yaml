@@ -4,8 +4,8 @@ services:
   - type: web
     name: playa-frontend
     env: static
-    # Virginia: cercana a Supabase São Paulo y al backend (que también en virginia).
-    region: virginia
+    # Los static sites de Render se sirven desde un CDN global (no admite
+    # `region`). El backend sí está en virginia para latencia con Supabase.
     plan: free
     buildCommand: ""
     staticPublishPath: .
