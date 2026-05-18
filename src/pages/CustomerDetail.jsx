@@ -20,6 +20,9 @@ function CustomerDetail() {
     const history = useHistory();
     const { toast } = useToast();
     const { branches } = useBranch();
+    // El PDF de cuotas usa el nombre y logo de la empresa para el header;
+    // ambos vienen en el `user` actual.
+    const { user } = useAuth();
 
     const [customer, setCustomer] = useState(null);
     const [sales, setSales] = useState([]);
@@ -258,15 +261,39 @@ function CustomerDetail() {
                         {quotasBySale.map(([saleNumber, qs]) => {
                             const total = qs.reduce((s, q) => s + Number(q.amount || 0), 0);
                             const pagado = qs.filter(q => q.status === 'paid').reduce((s, q) => s + Number(q.amount || 0), 0);
+                            // Sale completa para el PDF — buscamos en `sales` por número.
+                            // Si no se encuentra (raro), igual generamos con lo que hay
+                            // en la primera cuota como fallback parcial.
+                            const saleForPdf = sales.find(s => s.sale_number === saleNumber) || {
+                                sale_number: saleNumber,
+                                sale_date: qs[0]?.sale_date,
+                                total_price: total,
+                            };
                             return (
                                 <div key={saleNumber}>
-                                    <div className="flex justify-between items-baseline mb-2">
+                                    <div className="flex flex-wrap justify-between items-baseline gap-2 mb-2">
                                         <h4 className="font-semibold text-gray-800 font-mono">
                                             {saleNumber}
                                         </h4>
-                                        <div className="text-xs text-gray-600">
-                                            {qs.filter(q => q.status === 'paid').length}/{qs.length} cobradas ·
-                                            {' '}{formatGs(pagado)} / {formatGs(total)}
+                                        <div className="flex items-center gap-3">
+                                            <div className="text-xs text-gray-600">
+                                                {qs.filter(q => q.status === 'paid').length}/{qs.length} cobradas ·
+                                                {' '}{formatGs(pagado)} / {formatGs(total)}
+                                            </div>
+                                            <button type="button"
+                                                onClick={() => window.printQuotaSchedule({
+                                                    enterprise: {
+                                                        name: user?.enterprise_name,
+                                                        logo_url: user?.enterprise_logo_url,
+                                                    },
+                                                    customer,
+                                                    sale: saleForPdf,
+                                                    quotas: qs,
+                                                })}
+                                                className="text-xs px-2 py-1 border border-red-300 text-red-700 rounded hover:bg-red-50"
+                                                title="Generar PDF del cronograma de cuotas">
+                                                🖨 PDF cronograma
+                                            </button>
                                         </div>
                                     </div>
                                     <div className="overflow-x-auto">

@@ -41,6 +41,8 @@ function Sales() {
 
     const { selectedBranch, branches } = useBranch();
     const { toast } = useToast();
+    // Lo usamos para el PDF de cronograma (nombre + logo de la empresa).
+    const { user } = useAuth();
 
     // Edición de venta
     const [editingSale, setEditingSale] = useState(null);
@@ -701,6 +703,39 @@ function Sales() {
                         ? <div className="text-center py-4"><div className="loading"></div></div>
                         : (
                             <>
+                                {/* Botón PDF: visible cuando hay cuotas generadas.
+                                    Reutiliza printQuotaSchedule (cargado globalmente
+                                    desde src/utils/printSchedule.js). */}
+                                {quotas.length > 0 && (
+                                    <div className="flex justify-end mb-2">
+                                        <button type="button"
+                                            onClick={() => window.printQuotaSchedule({
+                                                enterprise: {
+                                                    name: user?.enterprise_name,
+                                                    logo_url: user?.enterprise_logo_url,
+                                                },
+                                                customer: {
+                                                    first_name: quotasSale.customer_name?.split(' ')[0] || '',
+                                                    last_name:  quotasSale.customer_name?.split(' ').slice(1).join(' ') || '',
+                                                    document_number: quotasSale.customer_document || '',
+                                                    phone: quotasSale.customer_phone || '',
+                                                    email: quotasSale.customer_email || '',
+                                                },
+                                                sale: {
+                                                    sale_number: quotasSale.sale_number,
+                                                    sale_date:   quotasSale.sale_date,
+                                                    total_price: quotasSale.total_price,
+                                                    down_payment: quotasSale.down_payment,
+                                                    vehicle_info: quotasSale.vehicle_info,
+                                                },
+                                                quotas,
+                                            })}
+                                            className="text-xs px-3 py-1 border border-red-300 text-red-700 rounded hover:bg-red-50"
+                                            title="Generar PDF del cronograma de cuotas (Imprimir / Guardar PDF)">
+                                            🖨 PDF cronograma
+                                        </button>
+                                    </div>
+                                )}
                                 <QuotasList quotas={quotas} onMarkPaid={markQuotaPaid} onUpdate={updateQuota} />
                                 <QuotaGenerator
                                     sale={quotasSale}
