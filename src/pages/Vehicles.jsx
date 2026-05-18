@@ -90,11 +90,24 @@ function Vehicles() {
         return vin.startsWith('VIN-DUMMY') || /^VIN[0-9]+$/.test(vin) || vin === '' || vin.length < 6;
     }
     function isSinPrecio(v) { return !v.price || Number(v.price) === 0; }
+    // Vehículo "estancado": available + >= 90 días desde created_at.
+    // 90 días es el umbral default que también usa el dashboard de salud
+    // del negocio (D1). Si en el futuro queremos hacerlo configurable
+    // por empresa lo movemos a settings.
+    function daysSince(iso) {
+        if (!iso) return 0;
+        const d = new Date(iso);
+        return Math.floor((Date.now() - d.getTime()) / (1000 * 60 * 60 * 24));
+    }
+    function isStuck(v) {
+        return v.state === 'available' && daysSince(v.created_at) >= 90;
+    }
 
     const qualityCounts = useMemo(() => ({
         all: vehicles.length,
         sin_precio: vehicles.filter(isSinPrecio).length,
         vin_basura: vehicles.filter(isVinBasura).length,
+        estancados: vehicles.filter(isStuck).length,
     }), [vehicles]);
 
     // Aplicar filtros
@@ -110,6 +123,7 @@ function Vehicles() {
         if (priceTo) list = list.filter(v => Number(v.price) <= Number(priceTo));
         if (quality === 'sin_precio')   list = list.filter(isSinPrecio);
         if (quality === 'vin_basura')   list = list.filter(isVinBasura);
+        if (quality === 'estancados')   list = list.filter(isStuck);
         const q = search.trim().toLowerCase();
         if (q) {
             list = list.filter(v =>
@@ -185,13 +199,14 @@ function Vehicles() {
                 </div>
             )}
 
-            {/* Chips de inconsistencias */}
-            {(qualityCounts.sin_precio > 0 || qualityCounts.vin_basura > 0) && (
+            {/* Chips de inconsistencias y stock estancado */}
+            {(qualityCounts.sin_precio > 0 || qualityCounts.vin_basura > 0 || qualityCounts.estancados > 0) && (
                 <div className="flex flex-wrap gap-2 mb-3">
                     {[
                         ['all',        `Todos (${qualityCounts.all})`,                'gray'],
                         ['sin_precio', `⚠ Sin precio (${qualityCounts.sin_precio})`,   'red'],
                         ['vin_basura', `⚠ VIN placeholder (${qualityCounts.vin_basura})`,'yellow'],
+                        ['estancados', `🐢 Estancados >90d (${qualityCounts.estancados})`, 'orange'],
                     ].map(([key, label, color]) => (
                         <button key={key} type="button"
                             onClick={() => setQuality(key)}

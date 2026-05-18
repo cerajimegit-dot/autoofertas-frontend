@@ -68,8 +68,10 @@ const apiClient = {
         api.delete(`/vehicles/${id}/`),
     getAvailableVehicles: () => 
         api.get('/vehicles/available/'),
-    getValorisedStock: () => 
+    getValorisedStock: () =>
         api.get('/vehicles/valorized_stock/'),
+    getStuckVehicles: (params = {}) =>
+        api.get('/vehicles/stuck/', { params }),
     
     // Brands
     getBrands: () => 
