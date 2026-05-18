@@ -158,6 +158,9 @@ function Dashboard() {
 
             {error && <div className="bg-yellow-50 text-yellow-800 p-3 rounded mb-4 text-sm">⚠ {error}</div>}
 
+            {/* Banner de alertas activas — sólo aparece si hay alguna */}
+            <ActiveAlertsBanner selectedBranch={selectedBranch} />
+
             {/* KPIs */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
                 <Card title="Vehículos">
@@ -593,6 +596,74 @@ function QuotasChart({ data }) {
         return () => chartRef.current?.destroy();
     }, [data]);
     return <canvas ref={canvasRef}></canvas>;
+}
+
+/**
+ * Banner de alertas activas — fila clickeable arriba del Dashboard que
+ * resalta lo que requiere atención del operador. Sólo aparece cuando
+ * hay alertas; si todo está sano (cero alertas), el componente devuelve
+ * null y no ocupa espacio.
+ *
+ * Cada chip muestra el title de la alerta y el botón de acción navega
+ * a la página relevante (a.action puede ser '/quotas', '/vehicles', etc).
+ *
+ * Colores:
+ *   warn → ámbar
+ *   crit → rojo
+ */
+function ActiveAlertsBanner({ selectedBranch }) {
+    const [data, setData] = useState(null);
+    const [dismissed, setDismissed] = useState(new Set());
+
+    useEffect(() => {
+        let cancelled = false;
+        const params = selectedBranch ? { branch: selectedBranch } : {};
+        apiClient.getActiveAlerts(params)
+            .then(r => { if (!cancelled) setData(r.data); })
+            .catch(() => { if (!cancelled) setData(null); });
+        return () => { cancelled = true; };
+    }, [selectedBranch]);
+
+    if (!data || !data.alerts) return null;
+    const visible = data.alerts.filter(a => !dismissed.has(a.id));
+    if (visible.length === 0) return null;
+
+    const history = window.ReactRouterDOM.useHistory();
+    return (
+        <div className="mb-4 space-y-2">
+            {visible.map(a => {
+                const bg = a.severity === 'crit'
+                    ? 'bg-red-50 border-red-300 text-red-900'
+                    : 'bg-amber-50 border-amber-300 text-amber-900';
+                const icon = a.severity === 'crit' ? '🚨' : '⚠';
+                return (
+                    <div key={a.id}
+                        className={`border rounded p-3 flex items-start gap-3 ${bg}`}>
+                        <span className="text-lg leading-none">{icon}</span>
+                        <div className="flex-1">
+                            <div className="font-semibold text-sm">{a.title}</div>
+                            <div className="text-xs mt-0.5">{a.detail}</div>
+                        </div>
+                        <div className="flex gap-2 flex-shrink-0">
+                            {a.action && (
+                                <button type="button"
+                                    onClick={() => history.push(a.action)}
+                                    className="text-xs px-2 py-1 bg-white border border-current rounded hover:bg-opacity-50">
+                                    Ir
+                                </button>
+                            )}
+                            <button type="button"
+                                onClick={() => setDismissed(prev => new Set(prev).add(a.id))}
+                                title="Descartar esta sesión (vuelve al recargar)"
+                                className="text-xs px-2 py-1 hover:underline">
+                                ×
+                            </button>
+                        </div>
+                    </div>
+                );
+            })}
+        </div>
+    );
 }
 
 /**

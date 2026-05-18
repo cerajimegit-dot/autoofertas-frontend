@@ -172,4 +172,6 @@ const apiClient = {
         api.get('/dashboard/seller_commissions/', { params }),
     getMarginAnalysis: (params = {}) =>
         api.get('/dashboard/margin_analysis/', { params }),
+    getActiveAlerts: (params = {}) =>
+        api.get('/dashboard/active_alerts/', { params }),
 };
