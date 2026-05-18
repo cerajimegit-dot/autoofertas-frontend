@@ -197,6 +197,10 @@ function Dashboard() {
                 vehículos estancados, top vendedor, tasa de conversión. */}
             <HealthPanel data={data.health} />
 
+            {/* Panel "A cobrar esta semana" — lista clickeable de cuotas
+                próximas a vencer con link WhatsApp pre-armado por cliente. */}
+            <UpcomingQuotasPanel selectedBranch={selectedBranch} />
+
             {/* Panel de inconsistencias — calidad de datos */}
             <DataQualityPanel data={data.dataQuality} />
 
@@ -579,6 +583,118 @@ function QuotasChart({ data }) {
         return () => chartRef.current?.destroy();
     }, [data]);
     return <canvas ref={canvasRef}></canvas>;
+}
+
+/**
+ * Panel "A cobrar próximas" — cuotas que vencen en los próximos N días
+ * (default 7), con WhatsApp link pre-armado por cliente.
+ *
+ * Se monta solo en el dashboard y fetchea con su propio efecto para que
+ * el slider de días no obligue a refrescar todos los demás bloques.
+ * El selector de sucursal global se pasa como prop para que el panel
+ * respete el filtro del navbar.
+ */
+function UpcomingQuotasPanel({ selectedBranch }) {
+    const [days, setDays] = useState(7);
+    const [includeOverdue, setIncludeOverdue] = useState(false);
+    const [data, setData] = useState(null);
+    const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+        let cancelled = false;
+        setLoading(true);
+        const params = { days, include_overdue: includeOverdue };
+        if (selectedBranch) params.branch = selectedBranch;
+        apiClient.getUpcomingQuotas(params).then(r => {
+            if (!cancelled) setData(r.data);
+        }).catch(() => { if (!cancelled) setData(null); })
+          .finally(() => { if (!cancelled) setLoading(false); });
+        return () => { cancelled = true; };
+    }, [days, includeOverdue, selectedBranch]);
+
+    return (
+        <Card className="mb-6"
+            title={`A cobrar (próximos ${days} días${includeOverdue ? ' + vencidas' : ''})`}>
+            <div className="flex flex-wrap items-center gap-3 mb-3">
+                <div className="flex items-center gap-2 text-sm">
+                    <label className="text-gray-600">Ventana:</label>
+                    {[3, 7, 14, 30].map(d => (
+                        <button key={d} type="button"
+                            onClick={() => setDays(d)}
+                            className={`px-2 py-0.5 rounded text-xs border ${
+                                days === d ? 'bg-red-600 text-white border-red-600' : 'bg-white hover:bg-gray-50'
+                            }`}>
+                            {d}d
+                        </button>
+                    ))}
+                </div>
+                <label className="flex items-center gap-1 text-sm text-gray-600">
+                    <input type="checkbox" checked={includeOverdue}
+                        onChange={e => setIncludeOverdue(e.target.checked)} />
+                    Incluir vencidas
+                </label>
+            </div>
+
+            {loading && <div className="text-sm text-gray-500">Cargando…</div>}
+            {!loading && data && data.results.length === 0 && (
+                <div className="text-sm text-gray-500 italic">
+                    Sin cuotas próximas a cobrar en este período. 🎉
+                </div>
+            )}
+            {!loading && data && data.results.length > 0 && (
+                <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                        <thead className="text-xs text-gray-500 border-b">
+                            <tr>
+                                <th className="text-left py-1">Vence</th>
+                                <th className="text-left py-1">Cliente</th>
+                                <th className="text-left py-1">Cuota</th>
+                                <th className="text-right py-1">Monto</th>
+                                <th className="text-left py-1">Teléfono</th>
+                                <th className="text-right py-1">Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {data.results.map(q => {
+                                const dia = q.days_until_due;
+                                const colorDia = dia == null
+                                    ? 'text-gray-500'
+                                    : dia < 0 ? 'text-red-700 font-semibold'
+                                    : dia <= 2 ? 'text-amber-700 font-semibold'
+                                    : 'text-gray-800';
+                                return (
+                                    <tr key={q.id} className="border-b hover:bg-gray-50">
+                                        <td className={`py-1 ${colorDia}`}>
+                                            {formatDate(q.due_date)}
+                                            {dia != null && (
+                                                <span className="text-xs ml-1">
+                                                    ({dia < 0 ? `${-dia}d atrasada` : dia === 0 ? 'hoy' : `en ${dia}d`})
+                                                </span>
+                                            )}
+                                        </td>
+                                        <td className="py-1">{q.customer_name || '-'}</td>
+                                        <td className="py-1 text-xs">
+                                            {q.sale_number ? `${q.sale_number} · cuota ${q.quota_number}` : `cuota ${q.quota_number}`}
+                                        </td>
+                                        <td className="py-1 text-right font-medium">{formatGs(q.amount)}</td>
+                                        <td className="py-1 text-xs text-gray-600">{q.customer_phone || '—'}</td>
+                                        <td className="py-1 text-right">
+                                            {q.whatsapp_link
+                                                ? <a href={q.whatsapp_link} target="_blank" rel="noopener noreferrer"
+                                                    className="inline-block text-xs px-2 py-1 bg-green-600 text-white rounded hover:bg-green-700">
+                                                    📱 WhatsApp
+                                                  </a>
+                                                : <span className="text-xs text-gray-400">sin teléfono</span>}
+                                        </td>
+                                    </tr>
+                                );
+                            })}
+                        </tbody>
+                    </table>
+                </div>
+            )}
+        </Card>
+    );
 }
 
 /**

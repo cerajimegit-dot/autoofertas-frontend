@@ -128,6 +128,8 @@ const apiClient = {
         api.get('/quotas/overdue/', { params }),
     getNext30DaysQuotas: () =>
         api.get('/quotas/next_30_days/'),
+    getUpcomingQuotas: (params = {}) =>
+        api.get('/quotas/upcoming/', { params }),
     getQuotaReport: () =>
         api.get('/quotas/quota_report/'),
     // El endpoint contact_whatsapp acepta GET (las acciones idempotentes deben
