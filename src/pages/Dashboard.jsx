@@ -201,6 +201,12 @@ function Dashboard() {
                 próximas a vencer con link WhatsApp pre-armado por cliente. */}
             <UpcomingQuotasPanel selectedBranch={selectedBranch} />
 
+            {/* Panel de comisiones por vendedor — tabla por seller con
+                monto, cantidad de ventas y comisión calculada al rate
+                que elija el admin. */}
+            <SellerCommissionsPanel dateFrom={dateFrom} dateTo={dateTo}
+                selectedBranch={selectedBranch} />
+
             {/* Panel de inconsistencias — calidad de datos */}
             <DataQualityPanel data={data.dataQuality} />
 
@@ -583,6 +589,148 @@ function QuotasChart({ data }) {
         return () => chartRef.current?.destroy();
     }, [data]);
     return <canvas ref={canvasRef}></canvas>;
+}
+
+/**
+ * Reporte de comisiones por vendedor en el período seleccionado.
+ *
+ * El % es editable inline (default 1%). El monto y la comisión se
+ * recalculan en el servidor (no en cliente) para que el reporte que se
+ * imprime sea idéntico a lo que muestra el backend. La impresión usa
+ * la misma función window.print del navegador que B2.
+ */
+function SellerCommissionsPanel({ dateFrom, dateTo, selectedBranch }) {
+    const [rate, setRate] = useState('1');
+    const [data, setData] = useState(null);
+    const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+        let cancelled = false;
+        setLoading(true);
+        const params = { date_from: dateFrom, date_to: dateTo, rate };
+        if (selectedBranch) params.branch = selectedBranch;
+        apiClient.getSellerCommissions(params)
+            .then(r => { if (!cancelled) setData(r.data); })
+            .catch(() => { if (!cancelled) setData(null); })
+            .finally(() => { if (!cancelled) setLoading(false); });
+        return () => { cancelled = true; };
+    }, [dateFrom, dateTo, selectedBranch, rate]);
+
+    function printReport() {
+        if (!data) return;
+        const today = new Date().toLocaleDateString('es-PY');
+        const rows = data.by_seller.map(s => `
+            <tr>
+                <td>${s.seller_name}</td>
+                <td class="num">${s.n_ventas}</td>
+                <td class="num">${Number(s.monto_total).toLocaleString('es-PY')}</td>
+                <td class="num"><strong>${Number(s.comision).toLocaleString('es-PY')}</strong></td>
+            </tr>
+        `).join('');
+        const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
+            <title>Comisiones ${data.periodo.date_from} a ${data.periodo.date_to}</title>
+            <style>
+                @page { size: A4; margin: 14mm; }
+                body { font-family: system-ui, sans-serif; font-size: 12px; padding: 14px; }
+                h1 { color: #dc2626; margin: 0 0 4px; }
+                .meta { color: #6b7280; font-size: 11px; margin-bottom: 14px; }
+                table { width: 100%; border-collapse: collapse; }
+                th, td { padding: 6px 8px; border-bottom: 1px solid #e5e7eb; text-align: left; }
+                thead { background: #f3f4f6; }
+                .num { text-align: right; font-variant-numeric: tabular-nums; }
+                tfoot td { border-top: 2px solid #6b7280; font-weight: 600; }
+                .toolbar { padding: 8px; background: #fef2f2; border-bottom: 1px solid #fecaca;
+                            margin: -14px -14px 14px; }
+                .toolbar button { background: #dc2626; color: white; border: 0; padding: 6px 14px;
+                                    border-radius: 4px; font-weight: 600; cursor: pointer; }
+                @media print { .toolbar { display: none; } }
+            </style>
+            </head><body>
+            <div class="toolbar">
+                <button onclick="window.print()">🖨 Imprimir / Guardar PDF</button>
+            </div>
+            <h1>Reporte de comisiones</h1>
+            <div class="meta">
+                Período: ${data.periodo.date_from} a ${data.periodo.date_to}
+                · Rate: ${data.rate_pct}%
+                · Generado: ${today}
+            </div>
+            <table>
+                <thead><tr>
+                    <th>Vendedor</th><th class="num">Ventas</th>
+                    <th class="num">Monto Gs.</th><th class="num">Comisión Gs.</th>
+                </tr></thead>
+                <tbody>${rows}</tbody>
+                <tfoot><tr>
+                    <td>TOTAL</td>
+                    <td class="num">${data.total_ventas}</td>
+                    <td class="num">${Number(data.total_monto).toLocaleString('es-PY')}</td>
+                    <td class="num">${Number(data.total_comision).toLocaleString('es-PY')}</td>
+                </tr></tfoot>
+            </table>
+            <script>setTimeout(() => window.print(), 300);</script>
+            </body></html>`;
+        const w = window.open('', '_blank');
+        if (!w) { alert('Permití pop-ups para imprimir.'); return; }
+        w.document.open(); w.document.write(html); w.document.close();
+    }
+
+    if (!data && !loading) return null;
+
+    return (
+        <Card className="mb-6"
+            title="Comisiones por vendedor">
+            <div className="flex flex-wrap items-center gap-3 mb-3">
+                <label className="text-sm text-gray-600 flex items-center gap-2">
+                    Rate (%):
+                    <input type="number" min="0" max="100" step="0.1"
+                        value={rate} onChange={e => setRate(e.target.value)}
+                        className="w-20 px-2 py-1 border rounded text-sm" />
+                </label>
+                <span className="text-xs text-gray-500">
+                    Total ventas: <strong>{data?.total_ventas || 0}</strong>
+                    {' · '}Monto: <strong>{formatGs(data?.total_monto)}</strong>
+                    {' · '}Comisión total: <strong className="text-emerald-700">{formatGs(data?.total_comision)}</strong>
+                </span>
+                <Button size="sm" variant="secondary" onClick={printReport}
+                    disabled={!data || data.by_seller.length === 0}>
+                    🖨 PDF reporte
+                </Button>
+            </div>
+            {loading && <div className="text-sm text-gray-500">Cargando…</div>}
+            {!loading && data && data.by_seller.length === 0 && (
+                <div className="text-sm text-gray-500 italic">
+                    Sin ventas con vendedor asignado en este período.
+                </div>
+            )}
+            {!loading && data && data.by_seller.length > 0 && (
+                <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                        <thead className="text-xs text-gray-500 border-b">
+                            <tr>
+                                <th className="text-left py-1">Vendedor</th>
+                                <th className="text-right py-1">Ventas</th>
+                                <th className="text-right py-1">Monto</th>
+                                <th className="text-right py-1">Comisión</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {data.by_seller.map(s => (
+                                <tr key={s.seller_id || s.seller_username} className="border-b hover:bg-gray-50">
+                                    <td className="py-1">{s.seller_name}</td>
+                                    <td className="py-1 text-right">{s.n_ventas}</td>
+                                    <td className="py-1 text-right font-mono">{formatGs(s.monto_total)}</td>
+                                    <td className="py-1 text-right font-mono text-emerald-700 font-semibold">
+                                        {formatGs(s.comision)}
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            )}
+        </Card>
+    );
 }
 
 /**

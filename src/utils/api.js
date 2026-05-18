@@ -166,4 +166,6 @@ const apiClient = {
         api.get('/dashboard/data_quality/', { params }),
     getHealthMetrics: (params = {}) =>
         api.get('/dashboard/health/', { params }),
+    getSellerCommissions: (params = {}) =>
+        api.get('/dashboard/seller_commissions/', { params }),
 };
