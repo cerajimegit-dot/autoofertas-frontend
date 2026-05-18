@@ -168,6 +168,14 @@ function Sales() {
     function isSinCliente(s) { return s.customer == null; }
     function isSinVehiculo(s) { return s.vehicle == null; }
 
+    // "Es mía": la venta fue cargada por el usuario actual.
+    // `s.seller` puede ser objeto {id} o id pelado según el serializer;
+    // chequeamos ambos.
+    function isMia(s) {
+        const sellerId = typeof s.seller === 'object' && s.seller ? s.seller.id : s.seller;
+        return sellerId != null && user?.id != null && Number(sellerId) === Number(user.id);
+    }
+
     const qualityCounts = useMemo(() => ({
         all: sales.length,
         mig: sales.filter(isMig).length,
@@ -175,7 +183,8 @@ function Sales() {
         sin_cliente: sales.filter(isSinCliente).length,
         sin_vehiculo: sales.filter(isSinVehiculo).length,
         sin_seller: sales.filter(s => !s.seller && !s.seller_name).length,
-    }), [sales]);
+        mias: sales.filter(isMia).length,
+    }), [sales, user]);
 
     const filteredSales = useMemo(() => {
         let list = sales;
@@ -184,6 +193,7 @@ function Sales() {
         if (qualityFilter === 'sin_cliente') list = list.filter(isSinCliente);
         if (qualityFilter === 'sin_vehiculo')list = list.filter(isSinVehiculo);
         if (qualityFilter === 'reales')      list = list.filter(s => !isMig(s) && !isPlaceholder(s));
+        if (qualityFilter === 'mias')        list = list.filter(isMia);
         if (!search.trim()) return list;
         const q = search.toLowerCase();
         return list.filter(s =>
@@ -390,6 +400,8 @@ function Sales() {
                 {[
                     ['all',          `Todas (${qualityCounts.all})`,                  'gray'],
                     ['reales',       `Solo reales (${qualityCounts.all - qualityCounts.mig - qualityCounts.placeholder})`, 'blue'],
+                    // "Mis ventas" sólo aparece si el usuario tiene al menos una.
+                    ...(qualityCounts.mias > 0 ? [['mias', `👤 Mis ventas (${qualityCounts.mias})`, 'emerald']] : []),
                     ['mig',          `⚠ Códigos MIG (${qualityCounts.mig})`,           'yellow'],
                     ['placeholder',  `⚠ Placeholder (${qualityCounts.placeholder})`,   'orange'],
                     ['sin_cliente',  `⚠ Sin cliente (${qualityCounts.sin_cliente})`,   'red'],
