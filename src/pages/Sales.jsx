@@ -19,7 +19,17 @@ function Sales() {
     const [paymentForms, setPaymentForms] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
-    const [search, setSearch] = useState('');
+    // Pre-llenamos `search` desde ?q=<...> en la URL — esto permite que el
+    // palette global (Ctrl+K) "abra" una venta dejándola filtrada como
+    // única fila visible. Sin la lectura del query string, el palette
+    // mandaría al usuario al listado completo y tendría que volver a
+    // tipear el número de venta.
+    const initialSearch = (() => {
+        if (typeof window === 'undefined') return '';
+        const sp = new URLSearchParams(window.location.search);
+        return sp.get('q') || '';
+    })();
+    const [search, setSearch] = useState(initialSearch);
     const [showCreateSale, setShowCreateSale] = useState(false);
 
     // Filtros de calidad de datos

@@ -19,10 +19,20 @@ function Vehicles() {
     const [error, setError] = useState('');
 
     // Filtros
-    const [search, setSearch] = useState('');
+    // Si vinimos vía Ctrl+K → "ir a vehículo" con ?q=<VIN>, el listado
+    // arranca pre-filtrado por ese término (el palette no tiene detail
+    // page todavía; el "abrir" se traduce en filtro). En ese caso también
+    // forzamos stateFilter='all' — el palette puede llevarnos a un vendido
+    // y no queremos esconderlo por el default 'available'.
+    const initialQ = (() => {
+        if (typeof window === 'undefined') return '';
+        const sp = new URLSearchParams(window.location.search);
+        return sp.get('q') || '';
+    })();
+    const [search, setSearch] = useState(initialQ);
     // Por defecto arrancamos en "Disponibles": es lo que el vendedor necesita ver
     // primero ("¿qué tengo para ofrecer?"). Para revisar vendidos se cambia el chip.
-    const [stateFilter, setStateFilter] = useState('available');
+    const [stateFilter, setStateFilter] = useState(initialQ ? 'all' : 'available');
     const [brand, setBrand] = useState('');
     const [model, setModel] = useState('');
     const [yearFrom, setYearFrom] = useState('');
