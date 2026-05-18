@@ -1969,12 +1969,46 @@ function QuotaGenerator({ sale, existingQuotasCount, onSaved }) {
     const [planName,    setPlanName]    = React.useState('');
     const [preview,     setPreview]     = React.useState([]);
     const [saving,      setSaving]      = React.useState(false);
+    const [autoSaving,  setAutoSaving]  = React.useState(false);
 
     // Monto a financiar = total - entrega inicial
     const aFinanciar = Math.max(
         0,
         Number(sale.total_price || 0) - Number(sale.down_payment || 0)
     );
+
+    /**
+     * "Plan rápido": llamar al backend con sólo n_quotas + first_due_date
+     * y dejar que él haga los cálculos (redondeo, suma exacta, fechas
+     * mensuales). Útil cuando no querés tocar montos manualmente.
+     *
+     * Sólo aparece si no hay cuotas todavía (el backend devuelve 409 si
+     * las hay, pero acá lo escondemos para que ni se ofrezca).
+     */
+    async function generarAutomatico() {
+        if (existingQuotasCount > 0) return;
+        if (aFinanciar <= 0) {
+            toast.error('Esta venta no tiene monto a financiar.');
+            return;
+        }
+        if (!confirm(
+            `¿Generar ${numQuotas} cuotas de ~Gs. ${Math.round(aFinanciar / numQuotas).toLocaleString('es-PY')} ` +
+            `mensuales empezando ${firstDue || '30 días después de la venta'}?`
+        )) return;
+        setAutoSaving(true);
+        try {
+            const params = { n_quotas: numQuotas };
+            if (firstDue) params.first_due_date = firstDue;
+            if (planName) params.plan_name = planName;
+            const r = await apiClient.autoGenerateQuotas(sale.id, params);
+            toast.success(`${r.data.count} cuotas creadas`);
+            onSaved();
+        } catch (err) {
+            toast.error(err.response?.data?.detail || 'No se pudo generar el plan');
+        } finally {
+            setAutoSaving(false);
+        }
+    }
 
     // Sugerir monto por defecto = (total - entrega inicial) / cantidad de cuotas
     React.useEffect(() => {
@@ -2095,10 +2129,17 @@ function QuotaGenerator({ sale, existingQuotasCount, onSaved }) {
                 </Field>
             </div>
 
-            <div className="mb-4">
+            <div className="mb-4 flex flex-wrap gap-2 items-center">
                 <Button variant="primary" onClick={generarPreview}>
                     🎯 Generar preview
                 </Button>
+                {existingQuotasCount === 0 && aFinanciar > 0 && (
+                    <Button variant="success" onClick={generarAutomatico}
+                        disabled={autoSaving}
+                        title="El backend calcula montos y fechas, y cuadra la suma exacta.">
+                        {autoSaving ? 'Generando…' : '⚡ Plan rápido'}
+                    </Button>
+                )}
                 {preview.length > 0 && (
                     <span className="ml-3 text-sm text-gray-600">
                         Preview: <strong>{preview.length}</strong> cuotas ·

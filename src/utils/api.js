@@ -102,8 +102,10 @@ const apiClient = {
     // Sales
     getSales: (params) => 
         api.get('/sales/', { params }),
-    createSale: (data) => 
+    createSale: (data) =>
         api.post('/sales/', data),
+    autoGenerateQuotas: (saleId, params = {}) =>
+        api.post(`/sales/${saleId}/auto-generate-quotas/`, params),
     getMonthlySales: () => 
         api.get('/sales/monthly_sales/'),
     getSalesReport: (startDate, endDate) => 
