@@ -824,7 +824,17 @@ function VehicleCreateModal({ brands: initialBrands, onClose, onCreated }) {
         vin: '', license_plate: '', color: '', mileage: 0,
         fob: 0, container: 0, dispatch: 0, cam_vol: 0,
         price: 0, currency: 'PYG', state: 'available', description: '',
+        exchange_rate: '',  // FK a ExchangeRate; obligatorio si currency=USD
     });
+    // Cotizaciones activas para el dropdown que aparece cuando se elige USD.
+    // Las cargamos lazy: sólo al primer render del modal (el modal se monta
+    // bajo demanda, así que no se trae nunca si no se crea un vehículo).
+    const [exchangeRates, setExchangeRates] = React.useState([]);
+    React.useEffect(() => {
+        api.get('/exchange-rates/', { params: { is_active: true, page_size: 50 } })
+            .then(r => setExchangeRates(r.data.results || r.data))
+            .catch(() => setExchangeRates([]));
+    }, []);
     // Conceptos extras de costo — filas dinámicas que el usuario puede agregar.
     const [extraCosts, setExtraCosts] = React.useState([]);
     const COMMON_CONCEPTS = [
@@ -915,6 +925,9 @@ function VehicleCreateModal({ brands: initialBrands, onClose, onCreated }) {
                 currency: form.currency,
                 state: form.state,
                 description: form.description,
+                // exchange_rate sólo se manda cuando aplica; el backend
+                // rechaza con 400 si currency=USD y falta.
+                exchange_rate: form.currency === 'USD' ? (form.exchange_rate || null) : null,
             };
             const res = await api.post('/vehicles/', payload);
             const vehicle = res.data;
@@ -929,6 +942,11 @@ function VehicleCreateModal({ brands: initialBrands, onClose, onCreated }) {
                         concept: c.concept.trim(),
                         amount: Number(c.amount),
                         currency: c.currency,
+                        // exchange_rate sólo si USD; el backend rechaza si
+                        // queda null cuando currency='USD'.
+                        exchange_rate: c.currency === 'USD'
+                            ? (Number(c.exchange_rate) || null)
+                            : null,
                         notes: c.notes || '',
                         order: i,
                     });
@@ -1100,9 +1118,10 @@ function VehicleCreateModal({ brands: initialBrands, onClose, onCreated }) {
                                 <table className="w-full text-sm">
                                     <thead className="text-xs text-gray-500 border-b">
                                         <tr>
-                                            <th className="text-left py-1 w-1/2">Concepto</th>
+                                            <th className="text-left py-1 w-1/3">Concepto</th>
                                             <th className="text-left py-1">Monto</th>
                                             <th className="text-left py-1">Moneda</th>
+                                            <th className="text-left py-1">TC (si USD)</th>
                                             <th className="text-left py-1 w-8"></th>
                                         </tr>
                                     </thead>
@@ -1128,6 +1147,18 @@ function VehicleCreateModal({ brands: initialBrands, onClose, onCreated }) {
                                                         <option value="PYG">PYG</option>
                                                         <option value="USD">USD</option>
                                                     </select>
+                                                </td>
+                                                <td className="py-1 pr-2">
+                                                    {c.currency === 'USD' ? (
+                                                        <input type="number" step="0.01"
+                                                            value={c.exchange_rate || ''}
+                                                            onChange={e => updateExtraCost(i, { exchange_rate: e.target.value })}
+                                                            placeholder="Ej: 7300"
+                                                            className="w-24 px-2 py-1 border rounded"
+                                                            required />
+                                                    ) : (
+                                                        <span className="text-xs text-gray-400">—</span>
+                                                    )}
                                                 </td>
                                                 <td className="py-1 text-right">
                                                     <button type="button" onClick={() => removeExtraCost(i)}
@@ -1172,10 +1203,23 @@ function VehicleCreateModal({ brands: initialBrands, onClose, onCreated }) {
                         </Field>
                     </Grid>
                     {form.currency === 'USD' && (
-                        <p className="text-xs text-yellow-700 bg-yellow-50 p-2 rounded">
-                            ⚠ Para precios en USD necesitás una cotización activa en el sistema.
-                            Si no tenés una, creá una en el admin primero.
-                        </p>
+                        exchangeRates.length === 0
+                            ? <div className="bg-red-50 border border-red-300 text-red-800 text-xs rounded p-2 mt-2">
+                                ⚠ No hay cotizaciones activas. Andá al admin a crear una
+                                antes de cargar un vehículo en USD.
+                              </div>
+                            : <Field label="Cotización USD → PYG *">
+                                <select value={form.exchange_rate}
+                                    onChange={e => set('exchange_rate', e.target.value)}
+                                    className="w-full px-3 py-2 border rounded" required>
+                                    <option value="">-- Elegí una cotización --</option>
+                                    {exchangeRates.map(r => (
+                                        <option key={r.id} value={r.id}>
+                                            Gs. {Number(r.rate).toLocaleString('es-PY')} ({r.date})
+                                        </option>
+                                    ))}
+                                </select>
+                            </Field>
                     )}
                 </Section>
 

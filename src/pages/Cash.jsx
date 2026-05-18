@@ -477,16 +477,16 @@ function CashMovementModal({ movement, kindOptions, onClose, onSaved }) {
                             </select>
                         </Field>
                         {form.currency === 'USD' && <>
-                            <Field label="Monto USD original">
+                            <Field label="Monto USD original *">
                                 <input type="number" step="0.01" value={form.amount_usd}
                                     onChange={e => set('amount_usd', e.target.value)}
-                                    className="w-full px-3 py-2 border rounded" />
+                                    className="w-full px-3 py-2 border rounded" required />
                             </Field>
-                            <Field label="Tipo de cambio">
+                            <Field label="Tipo de cambio *">
                                 <input type="number" step="0.01" value={form.exchange_rate}
                                     onChange={e => set('exchange_rate', e.target.value)}
-                                    placeholder="Ej: 6600"
-                                    className="w-full px-3 py-2 border rounded" />
+                                    placeholder="Ej: 7300"
+                                    className="w-full px-3 py-2 border rounded" required />
                             </Field>
                         </>}
                         <Field label="Proveedor (opcional)">
