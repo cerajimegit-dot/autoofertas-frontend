@@ -809,6 +809,32 @@ function VehicleCreateModal({ brands: initialBrands, onClose, onCreated }) {
             .catch(() => setModels([]));
     }, [form.brand]);
 
+    // Sugerencia de precio basada en ventas históricas del mismo modelo.
+    // Lazy: se dispara cuando hay brand + model + year. Debounce de 300ms
+    // para no spam de requests mientras el usuario cambia campos.
+    const [priceSuggestion, setPriceSuggestion] = React.useState(null);
+    const [suggestionLoading, setSuggestionLoading] = React.useState(false);
+    React.useEffect(() => {
+        if (!form.brand || !form.model || !form.year) {
+            setPriceSuggestion(null);
+            return;
+        }
+        let cancelled = false;
+        setSuggestionLoading(true);
+        const t = setTimeout(() => {
+            api.get('/vehicles/price_suggestion/', {
+                params: { brand: form.brand, model: form.model, year: form.year },
+            }).then(r => {
+                if (!cancelled) setPriceSuggestion(r.data);
+            }).catch(() => {
+                if (!cancelled) setPriceSuggestion(null);
+            }).finally(() => {
+                if (!cancelled) setSuggestionLoading(false);
+            });
+        }, 300);
+        return () => { cancelled = true; clearTimeout(t); };
+    }, [form.brand, form.model, form.year]);
+
     async function onBrandCreated(newBrand) {
         const res = await api.get('/brands/', { params: { page_size: 1000 } });
         setBrands(res.data.results || res.data);
@@ -1078,6 +1104,17 @@ function VehicleCreateModal({ brands: initialBrands, onClose, onCreated }) {
 
                 {/* Precio */}
                 <Section title="Precio de venta">
+                    {/* Sugerencia de precio basada en ventas históricas del
+                        mismo modelo. Hint, no impuesto — el usuario decide. */}
+                    {priceSuggestion && priceSuggestion.matches > 0 && form.currency === 'PYG' && (
+                        <PriceSuggestionHint
+                            data={priceSuggestion}
+                            onUse={(v) => set('price', String(Math.round(v)))}
+                        />
+                    )}
+                    {suggestionLoading && (
+                        <p className="text-xs text-gray-500 mb-2">Buscando ventas similares…</p>
+                    )}
                     <Grid>
                         <Field label="Precio *">
                             <input type="number" step="0.01" value={form.price}
@@ -1615,6 +1652,56 @@ function CustomerCreateModal({ onClose, onCreated }) {
                 </div>
             </form>
         </Modal>
+    );
+}
+
+/**
+ * Hint visual de "ventas similares" arriba del campo de precio.
+ *
+ * `scope` indica qué tan precisa es la sugerencia:
+ *   - exact_year:    mismo modelo + año exacto → mensaje más afirmativo.
+ *   - year_window_2: mismo modelo, año dentro de ±2 → menos preciso.
+ *   - any_year:      mismo modelo, cualquier año → orientativo.
+ *
+ * No imponemos el precio. Sólo damos contexto y un botón "Usar mediana"
+ * para que un click haga el atajo común.
+ */
+function PriceSuggestionHint({ data, onUse }) {
+    const fmt = n => Math.round(Number(n)).toLocaleString('es-PY');
+    const scopeMsg = {
+        exact_year:    `${data.matches} venta(s) del mismo modelo y año`,
+        year_window_2: `${data.matches} venta(s) del mismo modelo (±2 años)`,
+        any_year:      `${data.matches} venta(s) del mismo modelo (cualquier año)`,
+    }[data.scope] || 'Ventas similares';
+    return (
+        <div className="bg-blue-50 border border-blue-200 rounded p-3 mb-3 text-sm">
+            <div className="flex flex-wrap justify-between items-start gap-2">
+                <div>
+                    <div className="font-medium text-blue-900">💡 {scopeMsg}</div>
+                    <div className="text-xs text-gray-700 mt-1">
+                        Rango: <strong>Gs. {fmt(data.min)}</strong> a <strong>Gs. {fmt(data.max)}</strong>{' '}
+                        · Mediana: <strong>Gs. {fmt(data.median)}</strong>{' '}
+                        · Promedio: Gs. {fmt(data.mean)}
+                    </div>
+                    {data.recent_examples && data.recent_examples.length > 0 && (
+                        <div className="text-xs text-gray-500 mt-1">
+                            Ejemplos recientes:{' '}
+                            {data.recent_examples.map((ex, i) => (
+                                <span key={i} className="mr-2">
+                                    {ex.sale_number} ({ex.year}, Gs. {fmt(ex.total_price)})
+                                </span>
+                            ))}
+                        </div>
+                    )}
+                </div>
+                <button type="button"
+                    onClick={() => onUse(data.median)}
+                    title="Usar la mediana del histórico como precio sugerido"
+                    className="text-xs px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 whitespace-nowrap">
+                    Usar Gs. {fmt(data.median)}
+                </button>
+            </div>
+        </div>
     );
 }
 
