@@ -214,6 +214,10 @@ function Dashboard() {
             <MarginAnalysisPanel dateFrom={dateFrom} dateTo={dateTo}
                 selectedBranch={selectedBranch} />
 
+            {/* Heatmap de cobros por día del mes — visualiza qué días se
+                concentran las cobranzas para planificar staff. */}
+            <PaymentHeatmapPanel selectedBranch={selectedBranch} />
+
             {/* Panel de inconsistencias — calidad de datos */}
             <DataQualityPanel data={data.dataQuality} />
 
@@ -596,6 +600,118 @@ function QuotasChart({ data }) {
         return () => chartRef.current?.destroy();
     }, [data]);
     return <canvas ref={canvasRef}></canvas>;
+}
+
+/**
+ * Heatmap de cobros por día del mes.
+ *
+ * Renderizado: grid 7-columnas (estilo calendario), cada celda con
+ * intensidad proporcional a count (o amount, seleccionable). Tooltip
+ * con el detalle exacto.
+ *
+ * Si no hay datos en la ventana, no se renderiza nada (al inicio del
+ * período el panel sería vacío).
+ */
+function PaymentHeatmapPanel({ selectedBranch }) {
+    const [months, setMonths] = useState(6);
+    const [metric, setMetric] = useState('count');   // 'count' | 'amount'
+    const [data, setData] = useState(null);
+    const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+        let cancelled = false;
+        setLoading(true);
+        const params = { months };
+        if (selectedBranch) params.branch = selectedBranch;
+        apiClient.getPaymentHeatmap(params)
+            .then(r => { if (!cancelled) setData(r.data); })
+            .catch(() => { if (!cancelled) setData(null); })
+            .finally(() => { if (!cancelled) setLoading(false); });
+        return () => { cancelled = true; };
+    }, [months, selectedBranch]);
+
+    if (loading && !data) {
+        return (
+            <Card title="Heatmap de cobros por día del mes" className="mb-6">
+                <div className="text-sm text-gray-500">Cargando…</div>
+            </Card>
+        );
+    }
+    if (!data || data.total_count === 0) return null;
+
+    const maxValue = Math.max(...data.days.map(d => d[metric] || 0));
+
+    function intensity(v) {
+        // 0..1, redondeado a múltiplos de 0.2 para discretizar colores
+        if (!v || maxValue === 0) return 0;
+        return Math.min(1, v / maxValue);
+    }
+    function bgColor(v) {
+        const i = intensity(v);
+        if (i === 0) return 'bg-gray-50';
+        if (i < 0.2) return 'bg-blue-100';
+        if (i < 0.4) return 'bg-blue-200';
+        if (i < 0.6) return 'bg-blue-400 text-white';
+        if (i < 0.8) return 'bg-blue-600 text-white';
+        return 'bg-blue-800 text-white';
+    }
+
+    return (
+        <Card title="Cobros por día del mes" className="mb-6">
+            <div className="flex flex-wrap items-center gap-3 mb-3">
+                <span className="text-sm text-gray-600">Ventana:</span>
+                {[3, 6, 12].map(m => (
+                    <button key={m} type="button"
+                        onClick={() => setMonths(m)}
+                        className={`px-2 py-0.5 rounded text-xs border ${
+                            months === m ? 'bg-red-600 text-white border-red-600' : 'bg-white hover:bg-gray-50'
+                        }`}>
+                        {m}m
+                    </button>
+                ))}
+                <span className="text-sm text-gray-600 ml-4">Métrica:</span>
+                <button type="button" onClick={() => setMetric('count')}
+                    className={`px-2 py-0.5 rounded text-xs border ${
+                        metric === 'count' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white hover:bg-gray-50'
+                    }`}>
+                    Cantidad
+                </button>
+                <button type="button" onClick={() => setMetric('amount')}
+                    className={`px-2 py-0.5 rounded text-xs border ${
+                        metric === 'amount' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white hover:bg-gray-50'
+                    }`}>
+                    Monto
+                </button>
+            </div>
+
+            <div className="grid grid-cols-7 gap-1 text-xs text-center font-mono">
+                {data.days.map(d => (
+                    <div key={d.day}
+                        className={`${bgColor(d[metric])} rounded p-2 cursor-default`}
+                        title={`Día ${d.day}: ${d.count} cobros · ${formatGs(d.amount)}`}>
+                        <div className="text-[10px] opacity-75">{d.day}</div>
+                        <div className="font-semibold">
+                            {metric === 'count'
+                                ? (d.count || '')
+                                : (d.amount > 0 ? `${Math.round(d.amount / 1_000_000)}M` : '')}
+                        </div>
+                    </div>
+                ))}
+            </div>
+
+            <div className="mt-3 flex flex-wrap gap-4 text-xs text-gray-600">
+                {data.top_count_day && (
+                    <span>📊 Pico cantidad: día <strong>{data.top_count_day.day}</strong> · {data.top_count_day.count} cobros</span>
+                )}
+                {data.top_amount_day && (
+                    <span>💰 Pico monto: día <strong>{data.top_amount_day.day}</strong> · {formatGs(data.top_amount_day.amount)}</span>
+                )}
+                <span className="ml-auto text-gray-400">
+                    {data.total_count} cobros en {data.months} mes(es)
+                </span>
+            </div>
+        </Card>
+    );
 }
 
 /**

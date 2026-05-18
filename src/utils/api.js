@@ -174,4 +174,6 @@ const apiClient = {
         api.get('/dashboard/margin_analysis/', { params }),
     getActiveAlerts: (params = {}) =>
         api.get('/dashboard/active_alerts/', { params }),
+    getPaymentHeatmap: (params = {}) =>
+        api.get('/dashboard/payment_heatmap/', { params }),
 };
