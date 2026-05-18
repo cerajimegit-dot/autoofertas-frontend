@@ -131,6 +131,32 @@ function Sales() {
         }
     }
 
+    /**
+     * Descarga CSV de ventas con los filtros server-side activos.
+     * Mismo patrón que B1 (cash export): responseType blob, header
+     * Content-Disposition para nombre de archivo, click virtual.
+     */
+    async function exportSalesCsv() {
+        try {
+            const params = {};
+            if (selectedBranch) params.branch = selectedBranch;
+            if (dateFrom)       params.date_from = dateFrom;
+            if (dateTo)         params.date_to = dateTo;
+            const res = await api.get('/sales/export/', { params, responseType: 'blob' });
+            const cd = res.headers['content-disposition'] || '';
+            const m = cd.match(/filename="?([^"]+)"?/);
+            const filename = m ? m[1] : `ventas_${dateFrom || 'all'}.csv`;
+            const url = URL.createObjectURL(res.data);
+            const a = document.createElement('a');
+            a.href = url; a.download = filename;
+            document.body.appendChild(a); a.click(); document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            toast.success('CSV descargado');
+        } catch (err) {
+            toast.error('No se pudo exportar el CSV');
+        }
+    }
+
     // Mantenemos fetchAll para los componentes que dependían de él (recarga total).
     async function fetchAll() {
         await fetchSales();
@@ -349,9 +375,13 @@ function Sales() {
                         {' '}(ordenadas por fecha, más recientes primero)
                     </p>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-2 flex-wrap">
                     <Button variant="primary"   onClick={openCreateSale} disabled={catalogsLoading}>
                         {catalogsLoading ? 'Cargando...' : '+ Nueva venta'}
+                    </Button>
+                    <Button variant="secondary" onClick={exportSalesCsv}
+                        title="Descargar CSV con las ventas del período + filtros activos">
+                        ⬇ Exportar CSV
                     </Button>
                     <Button variant="success"   onClick={exportMigToExcel}>📥 Exportar MIGs a Excel</Button>
                     <Button variant="secondary" onClick={fetchAll}>↻ Refrescar</Button>
