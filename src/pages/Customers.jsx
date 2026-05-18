@@ -81,6 +81,37 @@ function Customers() {
         });
     }, [customers, search, quality]);
 
+    // Sugerencias fuzzy del backend cuando el filtro local da 0 matches y
+    // hay al menos 3 caracteres de búsqueda. Ayuda con typos: "Cristian"
+    // matchea "Kristian", "Garcia" matchea "García", etc. Si pg_trgm
+    // está habilitado en producción, el orden es por similaridad;
+    // si no, por ILIKE de cada token.
+    const [fuzzy, setFuzzy] = useState([]);
+    const [fuzzyLoading, setFuzzyLoading] = useState(false);
+    useEffect(() => {
+        const q = search.trim();
+        // Sólo disparamos si el local filter quedó vacío y la búsqueda
+        // tiene tela (>= 3 chars). El debounce de 250ms evita hacer una
+        // request por cada tecla mientras el usuario tipea.
+        if (q.length < 3 || filtered.length > 0) {
+            setFuzzy([]);
+            return;
+        }
+        let cancelled = false;
+        setFuzzyLoading(true);
+        const t = setTimeout(async () => {
+            try {
+                const r = await api.get('/customers/search/', { params: { q, limit: 8 } });
+                if (!cancelled) setFuzzy(r.data.results || []);
+            } catch (_) {
+                if (!cancelled) setFuzzy([]);
+            } finally {
+                if (!cancelled) setFuzzyLoading(false);
+            }
+        }, 250);
+        return () => { cancelled = true; clearTimeout(t); };
+    }, [search, filtered.length]);
+
     if (loading) {
         return (
             <div className="max-w-7xl">
@@ -131,7 +162,7 @@ function Customers() {
                 ))}
             </div>
 
-            <div className="mb-4">
+            <div className="mb-4 relative">
                 <input
                     type="text"
                     value={search}
@@ -139,6 +170,37 @@ function Customers() {
                     placeholder="Buscar por nombre, documento, email o teléfono..."
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
                 />
+                {/* "¿Quisiste decir...?" — sólo aparece cuando el filtro
+                    local quedó vacío y el backend devolvió algo. */}
+                {search.trim().length >= 3 && filtered.length === 0 && (
+                    <div className="mt-2 bg-amber-50 border border-amber-200 rounded p-3">
+                        {fuzzyLoading
+                            ? <span className="text-sm text-gray-600">Buscando coincidencias…</span>
+                            : fuzzy.length === 0
+                                ? <span className="text-sm text-gray-600">
+                                    Sin resultados. Probá tipear menos caracteres o
+                                    verificá la ortografía.
+                                  </span>
+                                : <>
+                                    <div className="text-xs font-medium text-amber-900 mb-1">
+                                        ¿Quisiste decir alguno de estos?
+                                    </div>
+                                    <div className="flex flex-wrap gap-2">
+                                        {fuzzy.map(c => {
+                                            const nombre = `${c.first_name || ''} ${c.last_name || ''}`.trim() || '(sin nombre)';
+                                            return (
+                                                <Link key={c.id} to={`/customers/${c.id}`}
+                                                    className="text-sm bg-white border border-amber-300 rounded px-3 py-1 hover:bg-amber-100">
+                                                    {nombre}
+                                                    <span className="text-xs text-gray-500 ml-2 font-mono">{c.document_number}</span>
+                                                </Link>
+                                            );
+                                        })}
+                                    </div>
+                                  </>
+                        }
+                    </div>
+                )}
             </div>
 
             <Card>
