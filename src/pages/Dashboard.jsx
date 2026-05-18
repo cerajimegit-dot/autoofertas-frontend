@@ -592,6 +592,90 @@ function QuotasChart({ data }) {
 }
 
 /**
+ * Modal compacto para marcar una cuota como pagada desde el dashboard.
+ *
+ * Distinto del PayQuotaModal de CustomerDetail/Sales: este es mínimo,
+ * sólo pide fecha + forma de pago + nota opcional. Para flujos más
+ * elaborados (edición de monto, parciales) el usuario sigue usando
+ * la página de cuotas o el detalle del cliente.
+ *
+ * Llama a /quotas/:id/mark_as_paid/. Toast de éxito y refresca el panel.
+ */
+function QuickPayQuotaModal({ quota, onClose, onPaid }) {
+    const { toast } = useToast();
+    const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
+    const [method, setMethod] = useState('EF');
+    const [notes, setNotes] = useState('');
+    const [saving, setSaving] = useState(false);
+
+    async function submit(e) {
+        e.preventDefault();
+        setSaving(true);
+        try {
+            await apiClient.markQuotaAsPaid(quota.id, {
+                payment_date: date,
+                payment_method: method,
+                notes,
+            });
+            toast.success('Cobro registrado');
+            onPaid();
+        } catch (err) {
+            toast.error(err.response?.data?.detail || 'No se pudo registrar el cobro');
+        } finally {
+            setSaving(false);
+        }
+    }
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center px-4"
+             onClick={onClose}>
+            <div className="bg-white rounded-lg shadow-xl max-w-md w-full"
+                 onClick={e => e.stopPropagation()}>
+                <div className="p-4 border-b flex justify-between items-center">
+                    <h3 className="font-semibold">Cobrar cuota</h3>
+                    <button onClick={onClose} className="text-gray-500 text-2xl leading-none">×</button>
+                </div>
+                <form onSubmit={submit} className="p-4 space-y-3 text-sm">
+                    <div className="bg-gray-50 border border-gray-200 rounded p-3 text-xs">
+                        <div><strong>Cliente:</strong> {quota.customer_name || '—'}</div>
+                        <div><strong>Venta:</strong> {quota.sale_number || '—'} · cuota {quota.quota_number}</div>
+                        <div><strong>Vence:</strong> {formatDate(quota.due_date)}</div>
+                        <div><strong>Monto:</strong> {formatGs(quota.amount)}</div>
+                    </div>
+                    <div>
+                        <label className="block text-xs text-gray-600 mb-1">Fecha de pago</label>
+                        <input type="date" value={date} onChange={e => setDate(e.target.value)}
+                            className="w-full px-3 py-1.5 border rounded" required />
+                    </div>
+                    <div>
+                        <label className="block text-xs text-gray-600 mb-1">Forma de pago</label>
+                        <select value={method} onChange={e => setMethod(e.target.value)}
+                            className="w-full px-3 py-1.5 border rounded">
+                            <option value="EF">Efectivo</option>
+                            <option value="TB">Transferencia bancaria</option>
+                            <option value="CJ">Cheque</option>
+                            <option value="AC">A cuenta</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label className="block text-xs text-gray-600 mb-1">Notas (opcional)</label>
+                        <input type="text" value={notes} onChange={e => setNotes(e.target.value)}
+                            placeholder="Ej: pagó con dólares al cambio del día"
+                            className="w-full px-3 py-1.5 border rounded" />
+                    </div>
+                    <div className="flex justify-end gap-2 pt-2 border-t">
+                        <Button variant="secondary" type="button" onClick={onClose} disabled={saving}>Cancelar</Button>
+                        <Button variant="primary" type="submit" disabled={saving}>
+                            {saving ? 'Guardando…' : '✓ Registrar cobro'}
+                        </Button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
+}
+
+/**
  * Reporte de comisiones por vendedor en el período seleccionado.
  *
  * El % es editable inline (default 1%). El monto y la comisión se
@@ -747,6 +831,10 @@ function UpcomingQuotasPanel({ selectedBranch }) {
     const [includeOverdue, setIncludeOverdue] = useState(false);
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(false);
+    // Cuota seleccionada para marcar como pagada (inline modal).
+    const [payingQuota, setPayingQuota] = useState(null);
+    // Bump cada vez que cobramos algo, para forzar refetch del panel.
+    const [bumpKey, setBumpKey] = useState(0);
 
     useEffect(() => {
         let cancelled = false;
@@ -758,7 +846,7 @@ function UpcomingQuotasPanel({ selectedBranch }) {
         }).catch(() => { if (!cancelled) setData(null); })
           .finally(() => { if (!cancelled) setLoading(false); });
         return () => { cancelled = true; };
-    }, [days, includeOverdue, selectedBranch]);
+    }, [days, includeOverdue, selectedBranch, bumpKey]);
 
     return (
         <Card className="mb-6"
@@ -827,12 +915,21 @@ function UpcomingQuotasPanel({ selectedBranch }) {
                                         <td className="py-1 text-right font-medium">{formatGs(q.amount)}</td>
                                         <td className="py-1 text-xs text-gray-600">{q.customer_phone || '—'}</td>
                                         <td className="py-1 text-right">
-                                            {q.whatsapp_link
-                                                ? <a href={q.whatsapp_link} target="_blank" rel="noopener noreferrer"
-                                                    className="inline-block text-xs px-2 py-1 bg-green-600 text-white rounded hover:bg-green-700">
-                                                    📱 WhatsApp
-                                                  </a>
-                                                : <span className="text-xs text-gray-400">sin teléfono</span>}
+                                            <div className="inline-flex gap-1">
+                                                {q.whatsapp_link && (
+                                                    <a href={q.whatsapp_link} target="_blank" rel="noopener noreferrer"
+                                                        className="inline-block text-xs px-2 py-1 bg-green-600 text-white rounded hover:bg-green-700"
+                                                        title="Recordatorio por WhatsApp">
+                                                        📱
+                                                    </a>
+                                                )}
+                                                <button type="button"
+                                                    onClick={() => setPayingQuota(q)}
+                                                    className="text-xs px-2 py-1 bg-emerald-600 text-white rounded hover:bg-emerald-700"
+                                                    title="Registrar cobro">
+                                                    ✓ Cobrar
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                 );
@@ -840,6 +937,13 @@ function UpcomingQuotasPanel({ selectedBranch }) {
                         </tbody>
                     </table>
                 </div>
+            )}
+            {payingQuota && (
+                <QuickPayQuotaModal
+                    quota={payingQuota}
+                    onClose={() => setPayingQuota(null)}
+                    onPaid={() => { setPayingQuota(null); setBumpKey(k => k + 1); }}
+                />
             )}
         </Card>
     );
