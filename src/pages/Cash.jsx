@@ -84,6 +84,54 @@ function Cash() {
         } finally { setLoading(false); }
     }
 
+    /**
+     * Descarga el flujo de caja filtrado como CSV.
+     *
+     * Usa los mismos filtros que `fetchAll`. responseType:'blob' es clave —
+     * sin eso, axios intenta parsear la respuesta como JSON y rompe el
+     * archivo (corta caracteres no-ASCII y queda corrupto).
+     *
+     * Construimos un Blob URL temporal y disparamos el download vía un
+     * `<a download>` virtual; es el patrón estándar para descargas
+     * autenticadas que no se pueden hacer con un link directo (porque el
+     * navegador no agregaría el header Authorization a un GET de URL).
+     */
+    const [downloading, setDownloading] = useState(false);
+    async function exportCsv() {
+        setDownloading(true);
+        try {
+            const params = {};
+            if (dateFrom)        params.date_from = dateFrom;
+            if (dateTo)          params.date_to = dateTo;
+            if (selectedBranch)  params.branch = selectedBranch;
+            if (kindFilter)      params.kind = kindFilter;
+            if (directionFilter) params.direction = directionFilter;
+            const res = await api.get('/cash-movements/export/', {
+                params,
+                responseType: 'blob',
+            });
+            // Sacamos el nombre sugerido del header (lo manda el backend);
+            // fallback si por algún motivo no llegó.
+            const cd = res.headers['content-disposition'] || '';
+            const m = cd.match(/filename="?([^"]+)"?/);
+            const filename = m ? m[1] : `flujo_caja_${dateFrom}_a_${dateTo}.csv`;
+
+            const url = URL.createObjectURL(res.data);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            toast.success('CSV descargado');
+        } catch (err) {
+            toast.error('No se pudo exportar el CSV');
+        } finally {
+            setDownloading(false);
+        }
+    }
+
     async function deleteMovement(m) {
         if (m.is_auto) {
             toast.error('Este movimiento es automático — cambiá la venta o cuota de origen');
@@ -128,6 +176,11 @@ function Cash() {
                 </div>
                 <div className="flex gap-2">
                     <Button variant="primary" onClick={() => setShowCreate(true)}>+ Nuevo movimiento</Button>
+                    <Button variant="secondary" onClick={exportCsv}
+                        disabled={downloading || loading}
+                        title="Descargar CSV con los movimientos del período filtrado (con totales al final)">
+                        {downloading ? '⏳ Generando...' : '⬇ Exportar CSV'}
+                    </Button>
                     <Button variant="secondary" onClick={fetchAll}>↻ Refrescar</Button>
                 </div>
             </div>
