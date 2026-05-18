@@ -201,6 +201,15 @@ function CustomerDetail() {
                 </Card>
             </div>
 
+            {/* Notas internas — autosave debounced de 1.5s. Sirve para
+                anotar conversaciones, condiciones especiales, recordatorios.
+                Visible para todos los usuarios de la empresa. */}
+            <CustomerNotesCard
+                customerId={customer.id}
+                initialNotes={customer.notes || ''}
+                onSaved={(updated) => setCustomer(prev => ({ ...prev, ...updated }))}
+            />
+
             {/* Ventas */}
             <Card className="mb-6" title="Ventas">
                 {sales.length === 0 ? (
@@ -376,5 +385,111 @@ function CustomerDetail() {
                 />
             )}
         </div>
+    );
+}
+
+/**
+ * Tarjeta de notas internas con autosave.
+ *
+ * Pattern: usuario tipea, esperamos 1.5s de inactividad, PATCH y mostramos
+ * el indicador de estado (idle / typing / saving / saved / error). El
+ * `initialNotes` se usa como sincronización inicial; si el editor del modal
+ * cambia las notas, el padre rehace fetchAll y nos pasa el nuevo valor.
+ *
+ * Decisiones:
+ * - No bloqueamos navegación si hay cambios pending: 1.5s de margen es
+ *   suficiente para que el save quede agendado, y antes de unmount React
+ *   limpia el timer pero el último PATCH puede no haberse enviado. Como
+ *   compromiso, hacemos un PATCH "flush" en el cleanup si quedó algo
+ *   pendiente.
+ * - "Conflictos" con el modal Editar: el modal recibe el customer del padre
+ *   y al guardar reescribe; si el usuario tipea acá mientras el modal está
+ *   abierto, gana el último PATCH. No ofrecemos merge — es de un usuario
+ *   por sesión típicamente, y el caso de borde no justifica complejidad.
+ */
+function CustomerNotesCard({ customerId, initialNotes, onSaved }) {
+    const [value, setValue] = React.useState(initialNotes || '');
+    const [status, setStatus] = React.useState('idle');  // idle | typing | saving | saved | error
+    const valueRef = React.useRef(value);
+    const lastSavedRef = React.useRef(initialNotes || '');
+    const timerRef = React.useRef(null);
+
+    // Sincronizar si el padre cambia initialNotes (ej: tras guardar el modal).
+    React.useEffect(() => {
+        if (initialNotes !== valueRef.current) {
+            setValue(initialNotes || '');
+            lastSavedRef.current = initialNotes || '';
+            setStatus('idle');
+        }
+    }, [initialNotes]);
+
+    React.useEffect(() => { valueRef.current = value; }, [value]);
+
+    function scheduleSave(next) {
+        if (timerRef.current) clearTimeout(timerRef.current);
+        setStatus('typing');
+        timerRef.current = setTimeout(async () => {
+            if (next === lastSavedRef.current) {
+                setStatus('idle');
+                return;
+            }
+            setStatus('saving');
+            try {
+                const r = await api.patch(`/customers/${customerId}/`, { notes: next });
+                lastSavedRef.current = next;
+                setStatus('saved');
+                if (onSaved) onSaved(r.data);
+                // Volver a "idle" pasados 2s para no quedar siempre "guardado".
+                setTimeout(() => {
+                    setStatus(s => s === 'saved' ? 'idle' : s);
+                }, 2000);
+            } catch (err) {
+                console.warn('CustomerNotesCard save error', err);
+                setStatus('error');
+            }
+        }, 1500);
+    }
+
+    // Flush al desmontar si quedó algo pendiente — best-effort para no
+    // perder lo último que el usuario tipeó si se cambió de página rápido.
+    React.useEffect(() => () => {
+        if (timerRef.current) clearTimeout(timerRef.current);
+        const v = valueRef.current;
+        if (v !== lastSavedRef.current) {
+            // Fire-and-forget; no esperamos respuesta.
+            api.patch(`/customers/${customerId}/`, { notes: v }).catch(() => {});
+        }
+    }, [customerId]);
+
+    function onChange(e) {
+        const next = e.target.value;
+        setValue(next);
+        scheduleSave(next);
+    }
+
+    const statusEl = {
+        idle:   <span className="text-xs text-gray-400">sin cambios</span>,
+        typing: <span className="text-xs text-gray-500">escribiendo…</span>,
+        saving: <span className="text-xs text-blue-600">guardando…</span>,
+        saved:  <span className="text-xs text-green-700">✓ guardado</span>,
+        error:  <span className="text-xs text-red-700">⚠ error al guardar</span>,
+    }[status];
+
+    return (
+        <Card className="mb-6" title="Notas internas">
+            <div className="flex justify-between items-center mb-1">
+                <span className="text-xs text-gray-500">
+                    Visible para todos los usuarios de la empresa. Autoguardado.
+                </span>
+                {statusEl}
+            </div>
+            <textarea
+                value={value}
+                onChange={onChange}
+                rows={3}
+                placeholder="Ej: prefiere que lo llamen al mediodía; viaja a Asunción una vez por mes…"
+                className="w-full px-3 py-2 border rounded resize-y font-mono text-sm"
+            />
+        </Card>
     );
 }
