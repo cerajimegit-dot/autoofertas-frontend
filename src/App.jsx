@@ -115,6 +115,14 @@ function App() {
                     </ProtectedRoute>
                 </Route>
 
+                <Route exact path="/audit-logs">
+                    <ProtectedRoute isAuthenticated={isAuthenticated} loading={loading}>
+                        <Layout onLogout={handleLogout}>
+                            <AuditLogs />
+                        </Layout>
+                    </ProtectedRoute>
+                </Route>
+
                 {/* Redirect por defecto */}
                 <Redirect to="/" />
             </Switch>

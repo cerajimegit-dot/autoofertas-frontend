@@ -34,7 +34,10 @@ function Sidebar({ className = '' }) {
         { name: 'Clientes',     path: '/customers',   icon: '👥' },
         { name: 'Cuotas',       path: '/quotas',      icon: '📋' },
         { name: 'Flujo de caja',path: '/flujo-caja',  icon: '💵' },
-        ...(isAdmin ? [{ name: 'Usuarios', path: '/users', icon: '⚙️', adminOnly: true }] : []),
+        ...(isAdmin ? [
+            { name: 'Usuarios',  path: '/users',       icon: '⚙️', adminOnly: true },
+            { name: 'Auditoría', path: '/audit-logs',  icon: '📜', adminOnly: true },
+        ] : []),
     ];
 
     function isActive(path) {
