@@ -160,4 +160,6 @@ const apiClient = {
         api.get('/dashboard/alertas/', { params }),
     getDataQuality: (params = {}) =>
         api.get('/dashboard/data_quality/', { params }),
+    getHealthMetrics: (params = {}) =>
+        api.get('/dashboard/health/', { params }),
 };

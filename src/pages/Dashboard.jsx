@@ -46,7 +46,7 @@ function Dashboard() {
         summary: null, salesByMonth: null, quotasStatus: null,
         topCustomers: null, inventoryStats: null, ranking: null,
         morosos: null, aging: null, paymentForms: null, alertas: null,
-        dataQuality: null,
+        dataQuality: null, health: null,
     });
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
@@ -62,7 +62,7 @@ function Dashboard() {
         try {
             const [
                 summary, salesByMonth, quotasStatus, topCustomers, inventoryStats,
-                ranking, morosos, aging, paymentForms, alertas, dataQuality,
+                ranking, morosos, aging, paymentForms, alertas, dataQuality, health,
             ] = await Promise.allSettled([
                 apiClient.getDashboardSummary(params),
                 apiClient.getSalesByMonth(branchParam),
@@ -75,6 +75,7 @@ function Dashboard() {
                 apiClient.getSalesByPaymentForm(params),
                 apiClient.getAlertas(branchParam),
                 apiClient.getDataQuality(branchParam),
+                apiClient.getHealthMetrics(params),
             ]);
             const unwrap = r => r.status === 'fulfilled' ? r.value.data : null;
             setData({
@@ -89,9 +90,10 @@ function Dashboard() {
                 paymentForms: unwrap(paymentForms),
                 alertas: unwrap(alertas),
                 dataQuality: unwrap(dataQuality),
+                health: unwrap(health),
             });
             const failed = [summary, salesByMonth, quotasStatus, topCustomers, inventoryStats,
-                            ranking, morosos, aging, paymentForms, alertas, dataQuality]
+                            ranking, morosos, aging, paymentForms, alertas, dataQuality, health]
                 .filter(r => r.status === 'rejected');
             if (failed.length) {
                 console.warn('Dashboard: fallaron', failed);
@@ -189,6 +191,11 @@ function Dashboard() {
                 <MiniStat label="Cartera cobrada" value={formatGs(a.cartera_cobrada)}
                     color="text-green-700" />
             </div>
+
+            {/* Panel de salud del negocio — métricas blandas que no aparecen
+                en los KPIs duros: morosidad ponderada, ticket, días de pago,
+                vehículos estancados, top vendedor, tasa de conversión. */}
+            <HealthPanel data={data.health} />
 
             {/* Panel de inconsistencias — calidad de datos */}
             <DataQualityPanel data={data.dataQuality} />
@@ -572,4 +579,82 @@ function QuotasChart({ data }) {
         return () => chartRef.current?.destroy();
     }, [data]);
     return <canvas ref={canvasRef}></canvas>;
+}
+
+/**
+ * Salud del negocio — métricas blandas calculadas en /dashboard/health/.
+ *
+ * Mostramos 6 tarjetas con un valor + interpretación. Cada métrica lleva
+ * una pista de color (verde/rojo) según si está "saludable" para el
+ * promedio del rubro.
+ *
+ * Umbrales orientativos (AUTO OFERTAS):
+ *   - Morosidad <10% sano; >25% atención.
+ *   - Días pago <3 sano; >7 atención.
+ *   - Estancados <5 sano; >15 atención.
+ *   - Ticket promedio: sin umbral universal (depende del segmento).
+ */
+function HealthPanel({ data }) {
+    if (!data) return null;
+
+    const mora = data.tasa_morosidad?.porcentaje ?? 0;
+    const moraColor = mora < 10 ? 'text-green-700' : mora < 25 ? 'text-amber-700' : 'text-red-700';
+
+    const dpp = data.dias_promedio_pago?.dias;
+    const dppColor = dpp == null
+        ? 'text-gray-500'
+        : dpp <= 0 ? 'text-green-700'
+        : dpp <= 3 ? 'text-emerald-700'
+        : dpp <= 7 ? 'text-amber-700'
+        : 'text-red-700';
+
+    const est = data.vehiculos_estancados_90d?.count ?? 0;
+    const estColor = est < 5 ? 'text-green-700' : est < 15 ? 'text-amber-700' : 'text-red-700';
+
+    return (
+        <Card title="Salud del negocio (período seleccionado)" className="mb-6">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+                <MiniStat
+                    label="Tasa de morosidad"
+                    value={`${mora}%`}
+                    color={moraColor}
+                    hint={`${data.tasa_morosidad?.n_vencidas || 0} vencidas / ${data.tasa_morosidad?.n_activas || 0} activas`}
+                />
+                <MiniStat
+                    label="Ticket promedio"
+                    value={formatGs(data.ticket_promedio?.monto)}
+                    color="text-gray-900"
+                    hint={`${data.ticket_promedio?.n_ventas || 0} ventas`}
+                />
+                <MiniStat
+                    label="Días promedio de pago"
+                    value={dpp == null ? '—' : `${dpp >= 0 ? '+' : ''}${dpp}d`}
+                    color={dppColor}
+                    hint={dpp == null
+                        ? 'sin cuotas pagadas'
+                        : dpp <= 0 ? 'pagan antes 👍' : 'tras vencimiento'}
+                />
+                <MiniStat
+                    label="Estancados >90d"
+                    value={formatInt(est)}
+                    color={estColor}
+                    hint="autos available sin moverse"
+                />
+                <MiniStat
+                    label="Top vendedor"
+                    value={data.top_vendedor?.nombre || '—'}
+                    color="text-gray-900"
+                    hint={data.top_vendedor
+                        ? `${data.top_vendedor.ventas}x · ${formatGs(data.top_vendedor.total)}`
+                        : 'sin ventas con vendedor'}
+                />
+                <MiniStat
+                    label="Conversión cliente"
+                    value={`${data.tasa_conversion_clientes?.ratio ?? 0}x`}
+                    color="text-gray-900"
+                    hint={`${data.tasa_conversion_clientes?.ventas || 0} ventas / ${data.tasa_conversion_clientes?.clientes_unicos || 0} clientes`}
+                />
+            </div>
+        </Card>
+    );
 }
