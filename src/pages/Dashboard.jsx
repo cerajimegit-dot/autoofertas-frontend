@@ -207,6 +207,10 @@ function Dashboard() {
             <SellerCommissionsPanel dateFrom={dateFrom} dateTo={dateTo}
                 selectedBranch={selectedBranch} />
 
+            {/* Análisis de margen — peores ventas primero */}
+            <MarginAnalysisPanel dateFrom={dateFrom} dateTo={dateTo}
+                selectedBranch={selectedBranch} />
+
             {/* Panel de inconsistencias — calidad de datos */}
             <DataQualityPanel data={data.dataQuality} />
 
@@ -589,6 +593,109 @@ function QuotasChart({ data }) {
         return () => chartRef.current?.destroy();
     }, [data]);
     return <canvas ref={canvasRef}></canvas>;
+}
+
+/**
+ * Análisis de margen por venta. Tabla ordenada por margin_pct ASC
+ * (peores primero) para ayudar a identificar precios mal puestos.
+ *
+ * Color del margen:
+ *   margin_pct < 0   → texto rojo (vendí a pérdida)
+ *   0..10            → ámbar    (poco margen)
+ *   10..25           → verde    (sano)
+ *   >=25             → emerald  (muy bueno)
+ *
+ * Warning si hay vehículos con VehicleCost en USD sin tipo de cambio
+ * — se contabilizan como 0 y eso falsea el margen al alza.
+ */
+function MarginAnalysisPanel({ dateFrom, dateTo, selectedBranch }) {
+    const [data, setData] = useState(null);
+    const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+        let cancelled = false;
+        setLoading(true);
+        const params = { date_from: dateFrom, date_to: dateTo };
+        if (selectedBranch) params.branch = selectedBranch;
+        apiClient.getMarginAnalysis(params)
+            .then(r => { if (!cancelled) setData(r.data); })
+            .catch(() => { if (!cancelled) setData(null); })
+            .finally(() => { if (!cancelled) setLoading(false); });
+        return () => { cancelled = true; };
+    }, [dateFrom, dateTo, selectedBranch]);
+
+    function colorPct(pct) {
+        if (pct < 0)   return 'text-red-700 font-bold';
+        if (pct < 10)  return 'text-amber-700';
+        if (pct < 25)  return 'text-green-700';
+        return 'text-emerald-700 font-semibold';
+    }
+
+    if (!data && !loading) return null;
+    return (
+        <Card className="mb-6" title="Análisis de margen por venta">
+            {loading && <div className="text-sm text-gray-500">Cargando…</div>}
+            {!loading && data && (
+                <>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3 text-sm">
+                        <MiniStat label="Ventas analizadas" value={data.n_ventas} color="text-gray-900" />
+                        <MiniStat label="Ingreso total" value={formatGs(data.total_price)} color="text-gray-900" />
+                        <MiniStat label="Margen total"
+                            value={formatGs(data.total_margin)}
+                            color={data.total_margin < 0 ? 'text-red-700' : 'text-emerald-700'} />
+                        <MiniStat label="Margen promedio"
+                            value={`${data.avg_margin_pct}%`}
+                            color={colorPct(data.avg_margin_pct)} />
+                    </div>
+                    {data.warnings_usd_sin_tc > 0 && (
+                        <div className="text-xs bg-amber-50 border border-amber-200 rounded p-2 mb-3">
+                            ⚠ {data.warnings_usd_sin_tc} venta(s) tienen costos extras en USD sin
+                            tipo de cambio. Esos costos se contabilizaron como 0, lo que infla
+                            el margen real. Para corregirlo: en cada VehicleCost, configurar
+                            el TC o pasar el monto a PYG.
+                        </div>
+                    )}
+                    {data.results.length === 0
+                        ? <div className="text-sm text-gray-500 italic">Sin ventas en este período.</div>
+                        : <div className="overflow-x-auto">
+                            <table className="w-full text-sm">
+                                <thead className="text-xs text-gray-500 border-b">
+                                    <tr>
+                                        <th className="text-left py-1">N°</th>
+                                        <th className="text-left py-1">Fecha</th>
+                                        <th className="text-left py-1">Vehículo</th>
+                                        <th className="text-left py-1">Cliente</th>
+                                        <th className="text-right py-1">Precio</th>
+                                        <th className="text-right py-1">Costo</th>
+                                        <th className="text-right py-1">Margen</th>
+                                        <th className="text-right py-1">%</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {data.results.map(r => (
+                                        <tr key={r.sale_id} className="border-b hover:bg-gray-50">
+                                            <td className="py-1 font-mono text-xs">{r.sale_number}</td>
+                                            <td className="py-1 text-xs">{formatDate(r.sale_date)}</td>
+                                            <td className="py-1 text-xs">{r.vehicle_info}</td>
+                                            <td className="py-1 text-xs">{r.customer_name}</td>
+                                            <td className="py-1 text-right">{formatGs(r.price)}</td>
+                                            <td className="py-1 text-right text-gray-600">{formatGs(r.cost)}</td>
+                                            <td className={`py-1 text-right ${r.margin < 0 ? 'text-red-700' : ''}`}>
+                                                {formatGs(r.margin)}
+                                            </td>
+                                            <td className={`py-1 text-right ${colorPct(r.margin_pct)}`}>
+                                                {r.margin_pct}%
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                </>
+            )}
+        </Card>
+    );
 }
 
 /**

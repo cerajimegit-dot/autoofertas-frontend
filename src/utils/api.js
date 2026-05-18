@@ -168,4 +168,6 @@ const apiClient = {
         api.get('/dashboard/health/', { params }),
     getSellerCommissions: (params = {}) =>
         api.get('/dashboard/seller_commissions/', { params }),
+    getMarginAnalysis: (params = {}) =>
+        api.get('/dashboard/margin_analysis/', { params }),
 };
