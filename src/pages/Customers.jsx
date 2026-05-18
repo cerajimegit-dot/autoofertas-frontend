@@ -42,6 +42,27 @@ function Customers() {
         }
     }
 
+    /**
+     * Descarga el CSV del listado completo de clientes (sin paginación).
+     * Mismo pattern que cash/sales export.
+     */
+    async function exportCsv() {
+        try {
+            const res = await api.get('/customers/export/', { responseType: 'blob' });
+            const cd = res.headers['content-disposition'] || '';
+            const m = cd.match(/filename="?([^"]+)"?/);
+            const filename = m ? m[1] : `clientes.csv`;
+            const url = URL.createObjectURL(res.data);
+            const a = document.createElement('a');
+            a.href = url; a.download = filename;
+            document.body.appendChild(a); a.click(); document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            toast.success('CSV descargado');
+        } catch (err) {
+            toast.error('No se pudo exportar el CSV');
+        }
+    }
+
     function isDocAuto(c) {
         const d = (c.document_number || '').toUpperCase();
         return d.startsWith('DRV026-') || d.startsWith('SUC026-') || d.startsWith('CUOTA');
@@ -133,8 +154,12 @@ function Customers() {
                         Mostrando <strong>{filtered.length}</strong> de <strong>{customers.length}</strong> clientes
                     </p>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-2 flex-wrap">
                     <Button variant="primary" onClick={() => setShowCreate(true)}>+ Nuevo cliente</Button>
+                    <Button variant="secondary" onClick={exportCsv}
+                        title="Descargar CSV con todos los clientes de la empresa">
+                        ⬇ Exportar CSV
+                    </Button>
                     <Button variant="secondary" onClick={fetchCustomers}>↻ Refrescar</Button>
                 </div>
             </div>
