@@ -146,12 +146,23 @@ function CustomerDetail() {
                         {customer.city && <span>📍 {customer.city}</span>}
                     </div>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-2 flex-wrap">
                     {customer.phone && (
                         <Button variant="success" onClick={openWhatsappCustomer}>
                             💬 WhatsApp
                         </Button>
                     )}
+                    <Button variant="secondary"
+                        onClick={() => window.printCustomerDossier({
+                            enterprise: {
+                                name: user?.enterprise_name,
+                                logo_url: user?.enterprise_logo_url,
+                            },
+                            customer, sales, quotas, summary,
+                        })}
+                        title="PDF con todo el historial del cliente">
+                        🖨 PDF dossier
+                    </Button>
                     <Button variant="secondary" onClick={() => setEditing(true)}>
                         ✏ Editar
                     </Button>

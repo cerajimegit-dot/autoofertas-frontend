@@ -270,4 +270,233 @@
     }
 
     window.printQuotaSchedule = printQuotaSchedule;
+
+    /**
+     * Dossier PDF del cliente — TODO el historial en una sola hoja.
+     *
+     * Layout:
+     *   Header con logo + nombre empresa + fecha de generación.
+     *   Datos del cliente (nombre, doc, contacto, dirección, notas).
+     *   Resumen financiero (4 KPI tiles).
+     *   Tabla de ventas.
+     *   Por cada venta con cuotas: mini-tabla con sus cuotas.
+     *
+     * Se diseñó para imprimirse en 1-2 páginas A4. Las notas internas
+     * NO se imprimen aunque estén en el modelo — son visibles solo en
+     * la app para no quedar en papel firmado.
+     */
+    function printCustomerDossier({ enterprise, customer, sales, quotas, summary }) {
+        const today = new Date().toLocaleDateString('es-PY');
+        const logoSrc = enterprise?.logo_url || '/assets/logo.jpg';
+        const enterpriseName = escapeHtml(enterprise?.name || 'AUTO OFERTAS');
+        const customerFullName = escapeHtml(
+            `${customer?.first_name || ''} ${customer?.last_name || ''}`.trim() || '—'
+        );
+
+        // Agrupamos cuotas por sale_number para la sección "Cuotas".
+        // Usamos un Map para preservar orden de inserción.
+        const quotasBySale = new Map();
+        (quotas || []).forEach(q => {
+            const key = q.sale_number || '—';
+            if (!quotasBySale.has(key)) quotasBySale.set(key, []);
+            quotasBySale.get(key).push(q);
+        });
+
+        function saleStatusLabel(s) {
+            return s.collection_status_display || s.collection_status || s.status_display || '';
+        }
+
+        const salesRows = (sales || []).map(s => `
+            <tr>
+                <td class="mono">${escapeHtml(s.sale_number || '')}</td>
+                <td>${escapeHtml(formatDate(s.sale_date))}</td>
+                <td>${escapeHtml(s.vehicle_info || '')}</td>
+                <td class="num">${formatMoneyForPrint(s.total_price)}</td>
+                <td>${escapeHtml(s.payment_form_name || '')}</td>
+                <td>${escapeHtml(saleStatusLabel(s))}</td>
+            </tr>
+        `).join('');
+
+        function quotaStatusLabel(q) {
+            if (q.status === 'paid') return 'Pagada';
+            if (q.status === 'cancelled') return 'Cancelada';
+            const due = q.due_date ? new Date(q.due_date + 'T00:00:00') : null;
+            const todayD = new Date(); todayD.setHours(0, 0, 0, 0);
+            if (due && due < todayD) return 'VENCIDA';
+            return 'Pendiente';
+        }
+        function quotaStatusColor(label) {
+            return label === 'Pagada'    ? '#15803d'
+                 : label === 'VENCIDA'   ? '#b91c1c'
+                 : label === 'Cancelada' ? '#6b7280'
+                 : '#1f2937';
+        }
+
+        const quotaSections = Array.from(quotasBySale.entries()).map(([saleNum, qs]) => {
+            const totalPlan = qs.reduce((acc, q) => acc + Number(q.amount || 0), 0);
+            const pagado = qs.filter(q => q.status === 'paid')
+                .reduce((acc, q) => acc + Number(q.amount || 0), 0);
+            const rows = qs.map(q => {
+                const lbl = quotaStatusLabel(q);
+                return `<tr>
+                    <td class="center">${escapeHtml(q.quota_number)}</td>
+                    <td>${escapeHtml(formatDate(q.due_date))}</td>
+                    <td class="num">${formatMoneyForPrint(q.amount)}</td>
+                    <td style="color:${quotaStatusColor(lbl)}; font-weight:600">${lbl}</td>
+                    <td>${escapeHtml(formatDate(q.payment_date))}</td>
+                </tr>`;
+            }).join('');
+            return `
+                <div class="quota-section">
+                    <div class="quota-header">
+                        <span class="mono">${escapeHtml(saleNum)}</span>
+                        <span class="muted">
+                            ${qs.filter(q => q.status === 'paid').length}/${qs.length} cobradas ·
+                            Gs. ${formatMoneyForPrint(pagado)} / ${formatMoneyForPrint(totalPlan)}
+                        </span>
+                    </div>
+                    <table class="mini">
+                        <thead><tr>
+                            <th class="center">#</th><th>Vence</th>
+                            <th class="num">Monto</th><th>Estado</th><th>Pago</th>
+                        </tr></thead>
+                        <tbody>${rows}</tbody>
+                    </table>
+                </div>
+            `;
+        }).join('');
+
+        const html = `<!DOCTYPE html>
+<html lang="es"><head><meta charset="UTF-8">
+<title>Dossier — ${customerFullName}</title>
+<style>
+    @page { size: A4; margin: 12mm; }
+    * { box-sizing: border-box; }
+    body {
+        font-family: -apple-system, system-ui, "Segoe UI", Roboto, sans-serif;
+        font-size: 11px; color: #1f2937; margin: 0; padding: 12px;
+        max-width: 800px; margin: 0 auto;
+        -webkit-print-color-adjust: exact; print-color-adjust: exact;
+    }
+    .hdr { display: flex; align-items: center; gap: 12px;
+        border-bottom: 2px solid #dc2626; padding-bottom: 8px; margin-bottom: 10px; }
+    .hdr img { height: 48px; width: 48px; object-fit: contain; }
+    .hdr h1 { font-size: 20px; color: #dc2626; margin: 0; }
+    .hdr .meta { font-size: 10px; color: #6b7280; }
+
+    .customer { border: 1px solid #e5e7eb; border-radius: 4px;
+        padding: 8px 10px; margin-bottom: 10px; }
+    .customer h2 { font-size: 13px; margin: 0 0 4px; color: #374151; }
+    .customer dl { margin: 0; display: grid;
+        grid-template-columns: auto 1fr auto 1fr; gap: 2px 8px; font-size: 11px; }
+    .customer dt { color: #6b7280; }
+    .customer dd { margin: 0; }
+
+    .kpis { display: grid; grid-template-columns: repeat(4, 1fr);
+        gap: 8px; margin-bottom: 10px; }
+    .kpi { border: 1px solid #e5e7eb; border-radius: 4px; padding: 6px 8px; }
+    .kpi .lbl { font-size: 9px; color: #6b7280; text-transform: uppercase; }
+    .kpi .val { font-size: 14px; font-weight: 600; margin-top: 2px; }
+    .kpi.green .val   { color: #15803d; }
+    .kpi.yellow .val  { color: #b45309; }
+    .kpi.red .val     { color: #b91c1c; }
+
+    h3 { font-size: 12px; margin: 14px 0 4px; color: #374151;
+        border-bottom: 1px solid #e5e7eb; padding-bottom: 2px; }
+
+    table { width: 100%; border-collapse: collapse; font-size: 10px; margin-bottom: 4px; }
+    thead { background: #f3f4f6; }
+    th, td { padding: 3px 6px; border-bottom: 1px solid #e5e7eb; text-align: left; }
+    .num    { text-align: right; font-variant-numeric: tabular-nums; }
+    .center { text-align: center; }
+    .mono   { font-family: ui-monospace, "SF Mono", monospace; }
+    .muted  { color: #6b7280; font-size: 10px; }
+
+    .quota-section { margin: 8px 0; page-break-inside: avoid; }
+    .quota-header  { display: flex; justify-content: space-between;
+        align-items: baseline; margin-bottom: 2px; font-size: 11px; }
+    .mini th { background: #fafafa; font-size: 9px; }
+
+    .foot { margin-top: 12px; font-size: 9px; color: #6b7280;
+        text-align: center; border-top: 1px solid #e5e7eb; padding-top: 6px; }
+
+    .toolbar { position: sticky; top: 0; background: #fef2f2;
+        padding: 6px 12px; margin: -12px -12px 10px;
+        border-bottom: 1px solid #fecaca; display: flex; gap: 6px;
+        justify-content: flex-end; }
+    .toolbar button { background: #dc2626; color: white; border: 0;
+        padding: 4px 12px; border-radius: 4px; cursor: pointer;
+        font-size: 11px; font-weight: 600; }
+    .toolbar button.close { background: #6b7280; }
+    @media print { .toolbar { display: none; } body { max-width: none; padding: 0; } }
+</style></head><body>
+
+<div class="toolbar">
+    <button onclick="window.print()">🖨 Imprimir / Guardar PDF</button>
+    <button class="close" onclick="window.close()">Cerrar</button>
+</div>
+
+<div class="hdr">
+    <img src="${escapeHtml(logoSrc)}" alt="Logo" onerror="this.style.display='none'">
+    <div>
+        <h1>${enterpriseName}</h1>
+        <div class="meta">Dossier de cliente — generado el ${escapeHtml(today)}</div>
+    </div>
+</div>
+
+<div class="customer">
+    <h2>${customerFullName}</h2>
+    <dl>
+        <dt>Documento</dt><dd>${escapeHtml(customer?.document_number || '—')}</dd>
+        <dt>Tipo</dt><dd>${escapeHtml(customer?.document_type_display || customer?.document_type || '—')}</dd>
+        <dt>Teléfono</dt><dd>${escapeHtml(customer?.phone || '—')}</dd>
+        <dt>Email</dt><dd>${escapeHtml(customer?.email || '—')}</dd>
+        <dt>Ciudad</dt><dd>${escapeHtml(customer?.city || '—')}</dd>
+        <dt>Dirección</dt><dd>${escapeHtml(customer?.address || '—')}</dd>
+    </dl>
+</div>
+
+<div class="kpis">
+    <div class="kpi"><div class="lbl">Comprado</div><div class="val">Gs. ${formatMoneyForPrint(summary?.tot_comprado)}</div><div class="muted">${summary?.n_ventas || 0} venta(s)</div></div>
+    <div class="kpi green"><div class="lbl">Cobrado</div><div class="val">Gs. ${formatMoneyForPrint(summary?.tot_cobrado)}</div><div class="muted">${summary?.n_pagadas || 0} cuota(s)</div></div>
+    <div class="kpi yellow"><div class="lbl">Pendiente</div><div class="val">Gs. ${formatMoneyForPrint(summary?.tot_pendiente)}</div><div class="muted">${summary?.n_pendientes || 0} al día</div></div>
+    <div class="kpi red"><div class="lbl">Vencido</div><div class="val">Gs. ${formatMoneyForPrint(summary?.tot_vencido)}</div><div class="muted">${summary?.n_vencidas || 0} vencidas</div></div>
+</div>
+
+${sales && sales.length > 0 ? `
+<h3>Ventas (${sales.length})</h3>
+<table>
+    <thead><tr>
+        <th>N° venta</th><th>Fecha</th><th>Vehículo</th>
+        <th class="num">Total</th><th>Pago</th><th>Cobranza</th>
+    </tr></thead>
+    <tbody>${salesRows}</tbody>
+</table>
+` : ''}
+
+${quotaSections ? `<h3>Cuotas por venta</h3>${quotaSections}` : ''}
+
+<div class="foot">
+    Documento informativo. Cualquier diferencia será resuelta con los
+    registros del sistema.
+</div>
+
+<script>
+    window.addEventListener('load', () => {
+        setTimeout(() => { try { window.print(); } catch (_) {} }, 300);
+    });
+</script>
+</body></html>`;
+
+        const w = window.open('', '_blank');
+        if (!w) {
+            alert('El navegador bloqueó la ventana de impresión. Permití pop-ups y volvé a intentar.');
+            return;
+        }
+        w.document.open();
+        w.document.write(html);
+        w.document.close();
+    }
+
+    window.printCustomerDossier = printCustomerDossier;
 })();
