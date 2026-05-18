@@ -835,6 +835,54 @@ function UpcomingQuotasPanel({ selectedBranch }) {
     const [payingQuota, setPayingQuota] = useState(null);
     // Bump cada vez que cobramos algo, para forzar refetch del panel.
     const [bumpKey, setBumpKey] = useState(0);
+    // IDs de cuotas seleccionadas para bulk-WhatsApp.
+    const [selected, setSelected] = useState(new Set());
+
+    function toggleSelected(id) {
+        setSelected(prev => {
+            const next = new Set(prev);
+            next.has(id) ? next.delete(id) : next.add(id);
+            return next;
+        });
+    }
+    function selectAll() {
+        if (!data) return;
+        const ids = data.results.filter(q => q.whatsapp_link).map(q => q.id);
+        setSelected(new Set(ids));
+    }
+    function clearSelection() { setSelected(new Set()); }
+
+    // Pop-up blockers cortan window.open en loop. Lo manejamos con un
+    // pequeño delay entre apertura y mostramos un aviso si el browser
+    // bloquea alguno. La intención del usuario fue clara (click en el
+    // botón "Enviar a X seleccionados") así que el navegador suele
+    // permitirlo.
+    function bulkWhatsApp() {
+        if (!data) return;
+        const selecciones = data.results.filter(q =>
+            selected.has(q.id) && q.whatsapp_link
+        );
+        if (selecciones.length === 0) return;
+
+        let bloqueados = 0;
+        selecciones.forEach((q, idx) => {
+            // Pequeño stagger de 100ms para que el browser no detecte
+            // "muchas pestañas a la vez" y bloquee todo. En Chrome esto
+            // funciona; en Firefox a veces aún bloquea — el usuario debe
+            // permitir popups del sitio.
+            setTimeout(() => {
+                const w = window.open(q.whatsapp_link, '_blank');
+                if (!w) bloqueados++;
+                if (idx === selecciones.length - 1 && bloqueados > 0) {
+                    setTimeout(() => alert(
+                        `${bloqueados} ventana(s) fueron bloqueadas por el navegador. ` +
+                        `Permití pop-ups para este sitio y volvé a intentar.`
+                    ), 200);
+                }
+            }, idx * 120);
+        });
+        clearSelection();
+    }
 
     useEffect(() => {
         let cancelled = false;
@@ -869,6 +917,24 @@ function UpcomingQuotasPanel({ selectedBranch }) {
                         onChange={e => setIncludeOverdue(e.target.checked)} />
                     Incluir vencidas
                 </label>
+                {/* Bulk actions */}
+                {selected.size > 0 && (
+                    <div className="flex items-center gap-2 ml-auto">
+                        <span className="text-xs text-gray-600">{selected.size} seleccionada(s)</span>
+                        <Button size="sm" variant="success" onClick={bulkWhatsApp}>
+                            📱 Enviar a {selected.size}
+                        </Button>
+                        <Button size="sm" variant="secondary" onClick={clearSelection}>
+                            Limpiar
+                        </Button>
+                    </div>
+                )}
+                {selected.size === 0 && data && data.results.some(q => q.whatsapp_link) && (
+                    <button type="button" onClick={selectAll}
+                        className="ml-auto text-xs text-red-700 hover:underline">
+                        Seleccionar todas con WhatsApp
+                    </button>
+                )}
             </div>
 
             {loading && <div className="text-sm text-gray-500">Cargando…</div>}
@@ -882,6 +948,7 @@ function UpcomingQuotasPanel({ selectedBranch }) {
                     <table className="w-full text-sm">
                         <thead className="text-xs text-gray-500 border-b">
                             <tr>
+                                <th className="text-left py-1 w-8"></th>
                                 <th className="text-left py-1">Vence</th>
                                 <th className="text-left py-1">Cliente</th>
                                 <th className="text-left py-1">Cuota</th>
@@ -898,8 +965,16 @@ function UpcomingQuotasPanel({ selectedBranch }) {
                                     : dia < 0 ? 'text-red-700 font-semibold'
                                     : dia <= 2 ? 'text-amber-700 font-semibold'
                                     : 'text-gray-800';
+                                const isSelected = selected.has(q.id);
                                 return (
-                                    <tr key={q.id} className="border-b hover:bg-gray-50">
+                                    <tr key={q.id} className={`border-b hover:bg-gray-50 ${isSelected ? 'bg-red-50/40' : ''}`}>
+                                        <td className="py-1">
+                                            <input type="checkbox"
+                                                checked={isSelected}
+                                                onChange={() => toggleSelected(q.id)}
+                                                disabled={!q.whatsapp_link}
+                                                title={q.whatsapp_link ? 'Seleccionar para envío masivo' : 'Sin WhatsApp disponible'} />
+                                        </td>
                                         <td className={`py-1 ${colorDia}`}>
                                             {formatDate(q.due_date)}
                                             {dia != null && (
