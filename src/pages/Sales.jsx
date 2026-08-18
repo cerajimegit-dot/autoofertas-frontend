@@ -57,8 +57,13 @@ function Sales() {
     const [catalogsLoaded, setCatalogsLoaded] = useState(false);
     const [catalogsLoading, setCatalogsLoading] = useState(false);
 
-    // Re-fetch al cambiar sucursal o período
-    useEffect(() => { fetchSales(); }, [selectedBranch, dateFrom, dateTo]);
+    // Re-fetch al cambiar sucursal o período.
+    // Debounce de 500ms para que al tocar "Desde" la usuaria pueda seguir con "Hasta"
+    // sin que la pantalla se recargue en el medio.
+    useEffect(() => {
+        const t = setTimeout(fetchSales, 500);
+        return () => clearTimeout(t);
+    }, [selectedBranch, dateFrom, dateTo]);
 
     async function fetchSales() {
         setLoading(true);

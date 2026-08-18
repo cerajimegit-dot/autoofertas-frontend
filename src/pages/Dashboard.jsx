@@ -52,7 +52,11 @@ function Dashboard() {
     const [error, setError] = useState('');
 
     // Re-fetch al cambiar fechas o sucursal seleccionada.
-    useEffect(() => { fetchAll(); }, [dateFrom, dateTo, selectedBranch]); // eslint-disable-line
+    // Debounce 500ms para que al tocar "Desde" se pueda seguir con "Hasta" sin recarga en el medio.
+    useEffect(() => {
+        const t = setTimeout(fetchAll, 500);
+        return () => clearTimeout(t);
+    }, [dateFrom, dateTo, selectedBranch]); // eslint-disable-line
 
     async function fetchAll() {
         setLoading(true);
