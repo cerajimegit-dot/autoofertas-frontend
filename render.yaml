@@ -1,13 +1,17 @@
 # Render Blueprint para el frontend (static site)
-# El proyecto es no-build (Babel standalone + Tailwind CDN), entonces no hay paso de build.
-# Los static sites:
+# El proyecto es no-build (Babel standalone + Tailwind CDN), entonces casi no hay build.
+# El único paso de build reemplaza los `?v=DEV` de los <script src> por el timestamp
+# del deploy: sirve para cache-busting robusto (browser + Render CDN edge). Sin esto,
+# después de un deploy la usuaria tenía que hacer Ctrl+F5 o abrir en modo secreto.
+#
+# Los static sites de Render:
 #   - se sirven desde un CDN global (no admite `region`)
 #   - son gratis siempre (no admite `plan: free` — Render lo rechaza explícitamente)
 services:
   - type: web
     name: playa-frontend
     runtime: static
-    buildCommand: ""
+    buildCommand: "sed -i \"s|?v=DEV|?v=$(date +%s)|g\" index.html"
     staticPublishPath: .
     routes:
       - type: rewrite

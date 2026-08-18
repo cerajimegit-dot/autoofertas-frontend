@@ -6,7 +6,7 @@
     <title>Playas de Autos - Sistema de Gestión</title>
 
     <!-- Configuracion runtime (URL del backend) — editable sin reconstruir -->
-    <script src="config.js"></script>
+    <script src="config.js?v=DEV"></script>
 
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -93,32 +93,34 @@
     <div id="root"></div>
     
     <!-- Scripts de la aplicación -->
-    <script type="text/babel" src="src/utils/api.js"></script>
-    <script type="text/babel" src="src/utils/auth.js"></script>
-    <script type="text/babel" src="src/utils/storage.js"></script>
-    <script type="text/babel" src="src/utils/format.js"></script>
-    <script type="text/babel" src="src/context/AuthContext.jsx"></script>
-    <script type="text/babel" src="src/context/BranchContext.jsx"></script>
-    <script type="text/babel" src="src/components/Toast.jsx"></script>
-    <script type="text/babel" src="src/components/EmptyState.jsx"></script>
-    <script type="text/babel" src="src/components/Skeleton.jsx"></script>
-    <script type="text/babel" src="src/components/Badge.jsx"></script>
-    <script type="text/babel" src="src/components/ResponsiveTable.jsx"></script>
-    <script type="text/babel" src="src/components/FormField.jsx"></script>
-    <script type="text/babel" src="src/components/KeyboardShortcuts.jsx"></script>
-    <script type="text/babel" src="src/components/Navbar.jsx"></script>
-    <script type="text/babel" src="src/components/Sidebar.jsx"></script>
-    <script type="text/babel" src="src/components/Card.jsx"></script>
-    <script type="text/babel" src="src/components/Button.jsx"></script>
-    <script type="text/babel" src="src/pages/Login.jsx"></script>
-    <script type="text/babel" src="src/pages/Dashboard.jsx"></script>
-    <script type="text/babel" src="src/pages/Vehicles.jsx"></script>
-    <script type="text/babel" src="src/pages/Sales.jsx"></script>
-    <script type="text/babel" src="src/pages/Quotas.jsx"></script>
-    <script type="text/babel" src="src/pages/Customers.jsx"></script>
-    <script type="text/babel" src="src/pages/CustomerDetail.jsx"></script>
-    <script type="text/babel" src="src/pages/Cash.jsx"></script>
-    <script type="text/babel" src="src/pages/Users.jsx"></script>
-    <script type="text/babel" src="src/App.jsx"></script>
+    <!-- El ?v=DEV se reemplaza automáticamente por timestamp del deploy en render.yaml
+         para forzar cache-bust del browser y del CDN. En local siempre queda DEV. -->
+    <script type="text/babel" src="src/utils/api.js?v=DEV"></script>
+    <script type="text/babel" src="src/utils/auth.js?v=DEV"></script>
+    <script type="text/babel" src="src/utils/storage.js?v=DEV"></script>
+    <script type="text/babel" src="src/utils/format.js?v=DEV"></script>
+    <script type="text/babel" src="src/context/AuthContext.jsx?v=DEV"></script>
+    <script type="text/babel" src="src/context/BranchContext.jsx?v=DEV"></script>
+    <script type="text/babel" src="src/components/Toast.jsx?v=DEV"></script>
+    <script type="text/babel" src="src/components/EmptyState.jsx?v=DEV"></script>
+    <script type="text/babel" src="src/components/Skeleton.jsx?v=DEV"></script>
+    <script type="text/babel" src="src/components/Badge.jsx?v=DEV"></script>
+    <script type="text/babel" src="src/components/ResponsiveTable.jsx?v=DEV"></script>
+    <script type="text/babel" src="src/components/FormField.jsx?v=DEV"></script>
+    <script type="text/babel" src="src/components/KeyboardShortcuts.jsx?v=DEV"></script>
+    <script type="text/babel" src="src/components/Navbar.jsx?v=DEV"></script>
+    <script type="text/babel" src="src/components/Sidebar.jsx?v=DEV"></script>
+    <script type="text/babel" src="src/components/Card.jsx?v=DEV"></script>
+    <script type="text/babel" src="src/components/Button.jsx?v=DEV"></script>
+    <script type="text/babel" src="src/pages/Login.jsx?v=DEV"></script>
+    <script type="text/babel" src="src/pages/Dashboard.jsx?v=DEV"></script>
+    <script type="text/babel" src="src/pages/Vehicles.jsx?v=DEV"></script>
+    <script type="text/babel" src="src/pages/Sales.jsx?v=DEV"></script>
+    <script type="text/babel" src="src/pages/Quotas.jsx?v=DEV"></script>
+    <script type="text/babel" src="src/pages/Customers.jsx?v=DEV"></script>
+    <script type="text/babel" src="src/pages/CustomerDetail.jsx?v=DEV"></script>
+    <script type="text/babel" src="src/pages/Cash.jsx?v=DEV"></script>
+    <script type="text/babel" src="src/pages/Users.jsx?v=DEV"></script>
+    <script type="text/babel" src="src/App.jsx?v=DEV"></script>
 </body>
 </html>
