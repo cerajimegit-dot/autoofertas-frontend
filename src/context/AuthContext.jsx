@@ -43,21 +43,22 @@ function AuthProvider({ children }) {
     };
 
     const logout = async () => {
-        // Notificar al backend para que blacklistee el refresh token
-        // (el backend lo agrega a token_blacklist y no se puede volver
-        // a usar para renovar el access). Si la llamada falla, igual
-        // limpiamos el storage local.
+        // Limpiar estado local INMEDIATAMENTE (no esperar al backend).
+        // Antes: se hacia `await api.post('/users/logout/')` primero, y si
+        // el token estaba expirado o Render frio, el await colgaba y el
+        // boton "Cerrar sesion" parecia no responder por 10+ segundos.
         const refresh = authUtils.getRefreshToken();
-        if (refresh) {
-            try {
-                await api.post('/users/logout/', { refresh });
-            } catch (e) {
-                // Ignoramos errores: el usuario igual se va.
-            }
-        }
         authUtils.logout();
         setUser(null);
         setIsAuthenticated(false);
+
+        // Notificar al backend para blacklistear el refresh, fire-and-forget.
+        if (refresh) {
+            api.post('/users/logout/', { refresh }).catch(() => {});
+        }
+
+        // Redirigir a /login con replace para que no quede en history.
+        window.location.replace('/login');
     };
 
     return (

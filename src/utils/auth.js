@@ -16,9 +16,11 @@ const authUtils = {
     isAuthenticated: () => !!localStorage.getItem('access_token'),
     
     logout: () => {
-        localStorage.setItem('access_token', '');
-        localStorage.setItem('refresh_token', '');
-        localStorage.setItem('user', '');
+        // removeItem — antes usabamos setItem('') que dejaba residuo y confundia
+        // debug ("por que hay un access_token vacio guardado?")
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('refresh_token');
+        localStorage.removeItem('user');
     },
     
     setUser: (user) => {

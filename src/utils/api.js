@@ -28,7 +28,12 @@ api.interceptors.request.use(
     error => Promise.reject(error)
 );
 
-// Interceptor para manejar errores
+// Interceptor para manejar errores.
+// Dedupeamos con isRedirecting porque cuando el token JWT expira y hay 5-10
+// requests en paralelo (Dashboard, filtros de fecha, etc), todas devuelven
+// 401 y disparaban 10 window.location.href seguidos. Sin la guarda, el
+// browser puede quedar en un limbo raro donde la app "no responde".
+let isRedirecting = false;
 api.interceptors.response.use(
     response => response,
     error => {
@@ -36,11 +41,12 @@ api.interceptors.response.use(
             const url = (error.config && error.config.url) || '';
             const isLoginRequest = url.includes('/users/login');
             const onLoginPage = window.location.pathname.replace(/\/$/, '') === '/login';
-            // Solo redirigir si NO estamos en login y el request no es el login mismo
-            if (!isLoginRequest && !onLoginPage) {
+            if (!isLoginRequest && !onLoginPage && !isRedirecting) {
+                isRedirecting = true;
                 localStorage.removeItem('access_token');
                 localStorage.removeItem('refresh_token');
-                window.location.href = '/login';
+                localStorage.removeItem('user');
+                window.location.replace('/login');
             }
         }
         return Promise.reject(error);
