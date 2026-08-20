@@ -232,7 +232,8 @@ function Cash() {
                         ? <EmptyState
                             emoji="💰"
                             title="Sin movimientos en este período"
-                            description="Probá cambiar el rango de fechas o cargar un movimiento manual con + Nuevo movimiento."
+                            description="Probá cambiar el rango de fechas o cargar un movimiento manual."
+                            action={<Button variant="primary" onClick={() => setShowCreate(true)}>+ Nuevo movimiento</Button>}
                         />
                         : <div className="overflow-x-auto">
                             <table className="w-full text-sm">

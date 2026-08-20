@@ -127,10 +127,12 @@ function App() {
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
     <AuthProvider>
-        <BranchProvider>
-            <ToastProvider>
-                <App />
-            </ToastProvider>
-        </BranchProvider>
+        <ExchangeRateProvider>
+            <BranchProvider>
+                <ToastProvider>
+                    <App />
+                </ToastProvider>
+            </BranchProvider>
+        </ExchangeRateProvider>
     </AuthProvider>
 );

@@ -60,3 +60,65 @@ function formatDate(value) {
     const [, y, mo, d] = m;
     return `${d}/${mo}/${y}`;
 }
+
+/**
+ * Formato compacto para montos grandes.
+ *   formatGsShort(45000000)   -> "Gs. 45,0M"
+ *   formatGsShort(1500000)    -> "Gs. 1,5M"
+ *   formatGsShort(45000000000) -> "Gs. 45,0B"
+ * Útil para columnas apretadas en tablas.
+ */
+function formatGsShort(value) {
+    const n = Number(value);
+    if (!n || Number.isNaN(n)) return 'Gs. 0';
+    const abs = Math.abs(n);
+    const sign = n < 0 ? '-' : '';
+    if (abs >= 1_000_000_000) {
+        return `${sign}Gs. ${(abs / 1_000_000_000).toFixed(1).replace('.', ',')}B`;
+    }
+    if (abs >= 1_000_000) {
+        return `${sign}Gs. ${(abs / 1_000_000).toFixed(1).replace('.', ',')}M`;
+    }
+    if (abs >= 1_000) {
+        return `${sign}Gs. ${(abs / 1_000).toFixed(1).replace('.', ',')}K`;
+    }
+    return `${sign}Gs. ${abs}`;
+}
+
+/**
+ * Calcula la ganancia estimada de un vehículo:
+ *   ganancia = precio_venta - (fob * TC) - despacho - cam_vol - container
+ *
+ * Devuelve null si no hay precio o si faltan datos para calcular costos.
+ * Devuelve número (positivo o negativo) si hay datos suficientes.
+ */
+function calcGananciaEstimada(vehicle, exchangeRate) {
+    const price = Number(vehicle?.price || 0);
+    if (price <= 0) return null;
+    const fob = Number(vehicle?.fob || 0);
+    const dispatch = Number(vehicle?.dispatch || 0);
+    const cam_vol = Number(vehicle?.cam_vol || 0);
+    const container = Number(vehicle?.container || 0);
+    const tc = Number(exchangeRate || 0);
+    const fobGs = fob * tc;
+    const costos = fobGs + dispatch + cam_vol + container;
+    return price - costos;
+}
+
+/**
+ * Arma el mensaje para compartir un vehículo por WhatsApp.
+ *   -> "🚗 TOYOTA VITZ 2011\nGs. 45.000.000\nChasis: NSP130-...\nColor: PLATA"
+ */
+function formatVehicleForShare(vehicle) {
+    const brand = vehicle?.brand_name || '';
+    const model = vehicle?.model_name || '';
+    const year = vehicle?.year || '';
+    const color = vehicle?.color || '';
+    const vin = vehicle?.vin || '';
+    const price = Number(vehicle?.price || 0);
+    const lines = [`🚗 ${brand} ${model} ${year}`.trim()];
+    if (price > 0) lines.push(formatGs(price));
+    if (color) lines.push(`Color: ${color}`);
+    if (vin) lines.push(`Chasis: ${vin}`);
+    return lines.join('\n');
+}

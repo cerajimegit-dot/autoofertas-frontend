@@ -35,7 +35,8 @@ function ResponsiveTable({ columns, data, getRowKey = (r, i) => r.id ?? i, empty
             {/* Desktop: tabla */}
             <div className="hidden md:block overflow-x-auto">
                 <table className="w-full">
-                    <thead className="bg-gray-50 border-b">
+                    {/* Sticky para que el header quede visible al scrollear listas largas */}
+                    <thead className="bg-gray-50 border-b sticky top-16 z-10 shadow-sm">
                         <tr>
                             {columns.map(col => (
                                 <th key={col.key}

@@ -14,6 +14,8 @@
 const { useState, useEffect, useMemo } = React;
 
 function Vehicles() {
+    const history = ReactRouterDOM.useHistory();
+    const { rate: usdRate } = useExchangeRate();
     const [vehicles, setVehicles] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
@@ -36,8 +38,9 @@ function Vehicles() {
     // Filtros de inconsistencias (chip)
     const [quality, setQuality] = useState('all'); // all | sin_precio | vin_basura | inconsistente
 
-    // Modal de edicion
+    // Modal de edicion + template imprimible
     const [editing, setEditing] = useState(null);
+    const [printVehicle, setPrintVehicle] = useState(null);
     const { toast } = useToast();
 
     useEffect(() => { fetchVehicles(); }, [selectedBranch]);
@@ -142,9 +145,9 @@ function Vehicles() {
             <div className="max-w-7xl">
                 <div className="mb-6">
                     <h1 className="text-3xl font-bold text-gray-900">Inventario de Vehículos</h1>
-                    <p className="text-gray-600">Cargando...</p>
+                    <p className="text-gray-600">Cargando inventario...</p>
                 </div>
-                <TableSkeleton rows={10} cols={7} />
+                <TableSkeleton rows={10} cols={7} message="Cargando vehículos del inventario..." />
             </div>
         );
     }
@@ -331,13 +334,41 @@ function Vehicles() {
                                   ? <span className="text-red-600 font-medium">⚠ Sin precio</span>
                                   : <span className="font-semibold">{formatGs(v.price)}</span>
                           ) },
+                        { key: 'ganancia', label: 'Ganancia est.', render: v => {
+                              const g = calcGananciaEstimada(v, usdRate);
+                              if (g === null) return <span className="text-gray-400">—</span>;
+                              const cls = g > 0 ? 'text-green-700' : g < 0 ? 'text-red-600' : 'text-gray-600';
+                              return <span className={`text-sm font-medium ${cls}`} title={`Precio - (FOB×TC) - despachos`}>
+                                  {formatGsShort(g)}
+                              </span>;
+                          } },
                         { key: 'state',  label: 'Estado', render: v => vehicleStateBadge(v.state, v.state_display) },
                         { key: 'actions', label: '', render: v => (
-                              <button type="button" onClick={() => setEditing(v)}
-                                  className="px-3 py-1 text-xs border border-gray-300 rounded hover:bg-gray-100"
-                                  title="Editar vehículo">
-                                  ✏ Editar
-                              </button>
+                              <div className="flex gap-1">
+                                  <button type="button" onClick={() => setEditing(v)}
+                                      className="w-8 h-8 flex items-center justify-center border border-gray-300 rounded hover:bg-gray-100"
+                                      title="Editar vehículo">✏</button>
+                                  <button type="button"
+                                      onClick={() => {
+                                          const msg = formatVehicleForShare(v);
+                                          window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
+                                      }}
+                                      className="w-8 h-8 flex items-center justify-center border border-emerald-300 text-emerald-700 rounded hover:bg-emerald-50"
+                                      title="Compartir por WhatsApp">📱</button>
+                                  <button type="button"
+                                      onClick={() => {
+                                          setPrintVehicle(v);
+                                          setTimeout(() => window.print(), 100);
+                                      }}
+                                      className="w-8 h-8 flex items-center justify-center border border-gray-300 rounded hover:bg-gray-100"
+                                      title="Imprimir ficha">🖨</button>
+                                  {v.state === 'available' && (
+                                      <button type="button"
+                                          onClick={() => history.push(`/sales?new=1&vehicle=${v.id}`)}
+                                          className="w-8 h-8 flex items-center justify-center border border-red-300 text-red-700 rounded hover:bg-red-50"
+                                          title="Registrar venta">💰</button>
+                                  )}
+                              </div>
                           ) },
                     ]}
                     emptyState={
@@ -363,6 +394,53 @@ function Vehicles() {
                     }}
                 />
             )}
+
+            {/* Template imprimible — solo visible al hacer window.print() */}
+            {printVehicle && <PrintableVehicleCard vehicle={printVehicle} />}
+        </div>
+    );
+}
+
+/* ---------- Ficha imprimible A4 de un vehiculo ---------- */
+function PrintableVehicleCard({ vehicle: v }) {
+    return (
+        <div className="print-only" style={{ padding: '1cm', fontFamily: 'Arial, sans-serif' }}>
+            <div style={{ borderBottom: '2px solid #333', paddingBottom: '10px', marginBottom: '20px' }}>
+                <h1 style={{ margin: 0, fontSize: '22pt' }}>AUTO OFERTAS</h1>
+                <p style={{ margin: '4px 0 0 0', fontSize: '10pt', color: '#666' }}>
+                    Ficha de vehículo · Impreso {formatDate(new Date().toISOString())}
+                </p>
+            </div>
+
+            <h2 style={{ fontSize: '18pt', margin: '0 0 4px 0' }}>
+                {v.brand_name} {v.model_name}
+            </h2>
+            <p style={{ fontSize: '12pt', color: '#666', margin: '0 0 20px 0' }}>
+                Año {v.year} · Color {v.color || '—'}
+            </p>
+
+            <table style={{ marginBottom: '20px' }}>
+                <tbody>
+                    <tr><th style={{ width: '35%' }}>Chasis</th><td style={{ fontFamily: 'monospace' }}>{v.vin}</td></tr>
+                    <tr><th>Patente</th><td>{v.license_plate || '—'}</td></tr>
+                    <tr><th>Año</th><td>{v.year}</td></tr>
+                    <tr><th>Color</th><td>{v.color || '—'}</td></tr>
+                    <tr><th>Kilometraje</th><td>{v.mileage ? `${formatMoney(v.mileage)} km` : '—'}</td></tr>
+                    <tr><th>Estado</th><td>{v.state_display || v.state}</td></tr>
+                    <tr><th>Sucursal</th><td>{v.branch_name || '—'}</td></tr>
+                </tbody>
+            </table>
+
+            <div style={{ border: '2px solid #333', padding: '15px', textAlign: 'center', marginTop: '30px' }}>
+                <div style={{ fontSize: '10pt', color: '#666' }}>PRECIO DE VENTA</div>
+                <div style={{ fontSize: '24pt', fontWeight: 'bold', marginTop: '5px' }}>
+                    {v.price && Number(v.price) > 0 ? formatGs(v.price) : 'A CONSULTAR'}
+                </div>
+            </div>
+
+            <p style={{ marginTop: '40px', fontSize: '9pt', color: '#666' }}>
+                Datos sujetos a verificación. Los precios pueden variar sin previo aviso.
+            </p>
         </div>
     );
 }

@@ -7,7 +7,9 @@
 
 function Navbar({ onLogout }) {
     const { user } = useAuth();
+    const { rate: usdRate, source: usdSource, date: usdDate, loading: usdLoading, refresh: refreshUsd } = useExchangeRate();
     const [menuOpen, setMenuOpen] = React.useState(false);
+    const [usdModalOpen, setUsdModalOpen] = React.useState(false);
     const menuRef = React.useRef(null);
 
     React.useEffect(() => {
@@ -59,10 +61,63 @@ function Navbar({ onLogout }) {
                         </a>
                     </div>
 
-                    {/* Centro: selector de sucursal */}
+                    {/* Centro: selector de sucursal + chip USD */}
                     <div className="flex-1 flex items-center justify-center gap-3 min-w-0">
                         <BranchSelector />
+                        {/* Chip cotización USD — visible siempre. Click abre modal con detalle. */}
+                        <button type="button"
+                            onClick={() => setUsdModalOpen(true)}
+                            className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-full text-sm text-emerald-900 transition"
+                            title={usdSource ? `Fuente: ${usdSource} · ${usdDate || ''}` : 'Cotización USD del día'}>
+                            <span className="text-xs">💱 USD</span>
+                            <span className="font-semibold">
+                                {usdLoading ? '...' : (usdRate ? formatMoney(usdRate) : '—')}
+                            </span>
+                        </button>
                     </div>
+
+                    {/* Modal simple con detalle del USD */}
+                    {usdModalOpen && (
+                        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4"
+                             onClick={() => setUsdModalOpen(false)}>
+                            <div className="bg-white rounded-lg max-w-sm w-full p-5"
+                                 onClick={e => e.stopPropagation()}>
+                                <div className="flex justify-between items-center mb-4">
+                                    <h3 className="text-lg font-semibold">Cotización del día</h3>
+                                    <button onClick={() => setUsdModalOpen(false)}
+                                        className="text-gray-400 hover:text-gray-700 text-2xl">×</button>
+                                </div>
+                                <div className="space-y-3 text-sm">
+                                    <div className="flex justify-between">
+                                        <span className="text-gray-600">USD 1:</span>
+                                        <strong>Gs. {usdRate ? formatMoney(usdRate) : '—'}</strong>
+                                    </div>
+                                    {usdSource && (
+                                        <div className="flex justify-between">
+                                            <span className="text-gray-600">Fuente:</span>
+                                            <span>{usdSource}</span>
+                                        </div>
+                                    )}
+                                    {usdDate && (
+                                        <div className="flex justify-between">
+                                            <span className="text-gray-600">Fecha:</span>
+                                            <span>{formatDate(usdDate)}</span>
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="mt-4 pt-3 border-t flex justify-between gap-2">
+                                    <button onClick={refreshUsd}
+                                        className="text-sm text-red-600 hover:underline">
+                                        ↻ Actualizar
+                                    </button>
+                                    <button onClick={() => setUsdModalOpen(false)}
+                                        className="text-sm text-gray-600 hover:underline">
+                                        Cerrar
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
 
                     {/* Derecha: ayuda + usuario */}
                     <div className="flex items-center gap-2" ref={menuRef}>

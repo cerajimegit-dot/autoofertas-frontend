@@ -13,9 +13,15 @@ function Skeleton({ className = '', width, height }) {
     return <div className={`skeleton rounded ${className}`} style={style} />;
 }
 
-function TableSkeleton({ rows = 8, cols = 6 }) {
+function TableSkeleton({ rows = 8, cols = 6, message }) {
     return (
         <div className="overflow-hidden rounded-lg border bg-white">
+            {message && (
+                <div className="bg-gray-50 border-b px-4 py-2 text-xs text-gray-500 flex items-center gap-2">
+                    <div className="loading" style={{ width: 12, height: 12, borderWidth: 2 }} />
+                    {message}
+                </div>
+            )}
             <div className="border-b bg-gray-50 p-3">
                 <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}>
                     {Array.from({ length: cols }).map((_, i) => (

@@ -87,6 +87,37 @@
             background-size: 200% 100%;
             animation: shimmer 1.5s infinite;
         }
+
+        /* ========== PRINT STYLES ==========
+           Ocultan la UI (navbar, sidebar, botones) y muestran solo
+           `.print-only` en blanco/negro estilo A4. Cada página que
+           necesite imprimir renderiza su template con class="print-only".
+        */
+        .print-only { display: none; }
+        @media print {
+            body {
+                background: white !important;
+                font-size: 10pt;
+                color: black;
+            }
+            .no-print, nav, aside, .navbar, .sidebar,
+            button, .print-hide {
+                display: none !important;
+            }
+            .print-only { display: block !important; }
+            main { padding: 0 !important; margin: 0 !important; }
+            @page { size: A4; margin: 1.5cm; }
+            /* Fondos rojos pasan a blanco con borde negro (tinta) */
+            .bg-red-600, .bg-red-500, .bg-red-100 {
+                background: white !important;
+                color: black !important;
+            }
+            table { border-collapse: collapse; width: 100%; }
+            th, td { border: 1px solid #333; padding: 4px 6px; text-align: left; }
+            th { background: #f0f0f0 !important; font-weight: bold; }
+            .avoid-break { page-break-inside: avoid; }
+            h1, h2, h3 { page-break-after: avoid; }
+        }
     </style>
 </head>
 <body class="bg-gray-50">
@@ -101,6 +132,7 @@
     <script type="text/babel" src="src/utils/format.js?v=DEV"></script>
     <script type="text/babel" src="src/context/AuthContext.jsx?v=DEV"></script>
     <script type="text/babel" src="src/context/BranchContext.jsx?v=DEV"></script>
+    <script type="text/babel" src="src/context/ExchangeRateContext.jsx?v=DEV"></script>
     <script type="text/babel" src="src/components/Toast.jsx?v=DEV"></script>
     <script type="text/babel" src="src/components/EmptyState.jsx?v=DEV"></script>
     <script type="text/babel" src="src/components/Skeleton.jsx?v=DEV"></script>
