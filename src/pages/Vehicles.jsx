@@ -14,7 +14,7 @@
 const { useState, useEffect, useMemo } = React;
 
 function Vehicles() {
-    const history = ReactRouterDOM.useHistory();
+    const history = window.ReactRouterDOM.useHistory();
     const { rate: usdRate } = useExchangeRate();
     const [vehicles, setVehicles] = useState([]);
     const [loading, setLoading] = useState(true);

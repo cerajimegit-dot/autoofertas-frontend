@@ -28,66 +28,47 @@ function NotificationBell() {
     const [readIds, setReadIds] = React.useState(loadReadIds);
     const dropdownRef = React.useRef(null);
 
-    React.useEffect(() => {
-        if (!isAuthenticated) return;
-        let cancelled = false;
-        async function loadNotifs() {
-            const all = [];
-            try {
-                // Cuotas vencidas
-                const overdue = await api.get('/quotas/overdue/', { params: { page_size: 100 } }).catch(() => null);
-                if (overdue) {
-                    const items = overdue.data.results || overdue.data || [];
-                    if (items.length > 0) {
-                        all.push({
-                            id: `overdue-${items.length}`,
-                            type: 'overdue',
-                            icon: '⚠',
-                            title: `${items.length} cuotas vencidas`,
-                            desc: 'Clientes con cuotas pendientes de cobro',
-                            link: '/quotas?status=overdue',
-                            severity: 'high',
-                        });
-                    }
-                }
-                // Vehículos estancados
-                const stuck = await api.get('/vehicles/stuck/', { params: { days: 90 } }).catch(() => null);
-                if (stuck) {
-                    const items = stuck.data.results || stuck.data || [];
-                    if (items.length > 0) {
-                        all.push({
-                            id: `stuck-${items.length}`,
-                            type: 'stuck',
-                            icon: '🚗',
-                            title: `${items.length} vehículos +90 días en stock`,
-                            desc: 'Considerar bajar precio o revisar publicación',
-                            link: '/vehicles?state=available',
-                            severity: 'medium',
-                        });
-                    }
-                }
-                // Cuotas próximas
-                const upcoming = await api.get('/quotas/upcoming/', { params: { days: 7 } }).catch(() => null);
-                if (upcoming) {
-                    const items = upcoming.data.results || upcoming.data || [];
-                    if (items.length > 0) {
-                        all.push({
-                            id: `upcoming-${items.length}`,
-                            type: 'upcoming',
-                            icon: '📅',
-                            title: `${items.length} cuotas por vencer esta semana`,
-                            desc: 'Enviar recordatorio a los clientes',
-                            link: '/quotas',
-                            severity: 'low',
-                        });
-                    }
-                }
-            } catch { /* ignore */ }
-            if (!cancelled) setNotifs(all);
-        }
-        loadNotifs();
-        return () => { cancelled = true; };
-    }, [isAuthenticated]);
+    // Cargar notifs on-demand al abrir el bell (NO al mount) — evita saturar
+    // el backend con requests extras junto con el resto de la app al login.
+    const [loaded, setLoaded] = React.useState(false);
+    async function loadNotifs() {
+        if (loaded) return;
+        setLoaded(true);
+        const all = [];
+        try {
+            const overdue = await api.get('/quotas/overdue/', { params: { page_size: 100 } }).catch(() => null);
+            if (overdue) {
+                const items = overdue.data.results || overdue.data || [];
+                if (items.length > 0) all.push({
+                    id: `overdue-${items.length}`, icon: '⚠',
+                    title: `${items.length} cuotas vencidas`,
+                    desc: 'Clientes con cuotas pendientes de cobro',
+                    link: '/quotas?status=overdue', severity: 'high',
+                });
+            }
+            const stuck = await api.get('/vehicles/stuck/', { params: { days: 90 } }).catch(() => null);
+            if (stuck) {
+                const items = stuck.data.results || stuck.data || [];
+                if (items.length > 0) all.push({
+                    id: `stuck-${items.length}`, icon: '🚗',
+                    title: `${items.length} vehículos +90 días en stock`,
+                    desc: 'Considerar bajar precio o revisar publicación',
+                    link: '/vehicles?state=available', severity: 'medium',
+                });
+            }
+            const upcoming = await api.get('/quotas/upcoming/', { params: { days: 7 } }).catch(() => null);
+            if (upcoming) {
+                const items = upcoming.data.results || upcoming.data || [];
+                if (items.length > 0) all.push({
+                    id: `upcoming-${items.length}`, icon: '📅',
+                    title: `${items.length} cuotas por vencer esta semana`,
+                    desc: 'Enviar recordatorio a los clientes',
+                    link: '/quotas', severity: 'low',
+                });
+            }
+        } catch { /* ignore */ }
+        setNotifs(all);
+    }
 
     React.useEffect(() => {
         if (!open) return;
@@ -118,7 +99,7 @@ function NotificationBell() {
 
     return (
         <div className="relative" ref={dropdownRef}>
-            <button onClick={() => setOpen(o => !o)}
+            <button onClick={() => { loadNotifs(); setOpen(o => !o); }}
                 className="relative w-9 h-9 rounded-full hover:bg-gray-100 flex items-center justify-center"
                 title="Notificaciones">
                 <span className="text-lg">🔔</span>
