@@ -38,6 +38,7 @@ function Sales() {
     const [selectedVehicle, setSelectedVehicle] = useState('');
     const [saleNumber, setSaleNumber] = useState('');
     const [saleDate, setSaleDate] = useState('');
+    const [paymentDate, setPaymentDate] = useState('');
     const [downPayment, setDownPayment] = useState('');
     const [savingSale, setSavingSale] = useState(false);
 
@@ -194,6 +195,7 @@ function Sales() {
         setSelectedVehicle(sale.vehicle || '');
         setSaleNumber(sale.sale_number || '');
         setSaleDate(sale.sale_date ? String(sale.sale_date).slice(0, 10) : '');
+        setPaymentDate(sale.payment_date || '');
         setDownPayment(sale.down_payment != null ? String(sale.down_payment) : '0');
     }
     function closeEditSale() {
@@ -202,6 +204,7 @@ function Sales() {
         setSelectedVehicle('');
         setSaleNumber('');
         setSaleDate('');
+        setPaymentDate('');
         setDownPayment('');
     }
     async function saveSale() {
@@ -213,6 +216,7 @@ function Sales() {
                 customer:     selectedCustomer  || null,
                 vehicle:      selectedVehicle   || null,
                 down_payment: Number(downPayment) || 0,
+                payment_date: paymentDate || null,
             };
             if (saleDate) {
                 payload.sale_date = `${saleDate}T12:00:00`;
@@ -584,6 +588,23 @@ function Sales() {
                             />
                             <p className="text-xs text-gray-500 mt-1">
                                 Poné la fecha real en la que se realizó la venta (no la fecha de registro).
+                            </p>
+                        </div>
+
+                        {/* Fecha del cobro (opcional) — cuando el cobro cayó otro día */}
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Fecha del cobro / entrega (opcional)
+                            </label>
+                            <input
+                                type="date"
+                                value={paymentDate}
+                                onChange={e => setPaymentDate(e.target.value)}
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                            />
+                            <p className="text-xs text-gray-500 mt-1">
+                                Solo si el dinero entró en un día distinto a la fecha de la venta.
+                                Afecta el flujo caja, no cambia la fecha de la venta.
                             </p>
                         </div>
 
@@ -1100,6 +1121,7 @@ function SaleCreateModal({ customers, vehicles, brands, paymentForms, onClose, o
     const [form, setForm] = React.useState({
         sale_number: '',
         sale_date: todayStr,
+        payment_date: '',   // opcional: fecha real del cobro / entrega (para flujo caja)
         customer: '',
         vehicle: '',
         unit_price: '',
@@ -1150,6 +1172,7 @@ function SaleCreateModal({ customers, vehicles, brands, paymentForms, onClose, o
             const payload = {
                 sale_number: form.sale_number.trim() || undefined,
                 sale_date: `${form.sale_date}T12:00:00`,
+                payment_date: form.payment_date || null,
                 customer: form.customer || null,
                 vehicle: form.vehicle || null,
                 unit_price: Number(form.unit_price) || 0,
@@ -1204,6 +1227,16 @@ function SaleCreateModal({ customers, vehicles, brands, paymentForms, onClose, o
                             <input type="date" value={form.sale_date}
                                 onChange={e => set('sale_date', e.target.value)}
                                 className="w-full px-3 py-2 border rounded" required />
+                        </Field>
+                        <Field label="Fecha del cobro / entrega (opcional)">
+                            <input type="date" value={form.payment_date}
+                                onChange={e => set('payment_date', e.target.value)}
+                                className="w-full px-3 py-2 border rounded"
+                                placeholder="Si el dinero entró otro día" />
+                            <p className="text-xs text-gray-500 mt-1">
+                                Solo si el cobro se hizo en fecha distinta a la venta
+                                (afecta el flujo caja, no el reporte de ventas).
+                            </p>
                         </Field>
                     </Grid>
                 </Section>
