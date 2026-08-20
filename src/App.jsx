@@ -67,6 +67,14 @@ function App() {
                     </ProtectedRoute>
                 </Route>
 
+                <Route exact path="/vehicles/:id">
+                    <ProtectedRoute isAuthenticated={isAuthenticated} loading={loading}>
+                        <Layout onLogout={handleLogout}>
+                            <VehicleDetail />
+                        </Layout>
+                    </ProtectedRoute>
+                </Route>
+
                 <Route exact path="/sales">
                     <ProtectedRoute isAuthenticated={isAuthenticated} loading={loading}>
                         <Layout onLogout={handleLogout}>

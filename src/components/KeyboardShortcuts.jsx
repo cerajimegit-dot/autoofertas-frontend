@@ -73,39 +73,51 @@ function GlobalSearch({ onClose }) {
     const [results, setResults] = React.useState({ sales: [], customers: [], vehicles: [] });
     const history = useHistory();
 
+    // Parse prefixes: "v <vin>" busca solo vehiculos, "c <name>" solo clientes,
+    // "s <sale>" solo ventas. Sin prefijo busca en las 3.
+    const [prefix, textQuery] = React.useMemo(() => {
+        const q = (query || '').trim();
+        const m = q.match(/^(v|c|s)\s+(.+)$/i);
+        if (m) return [m[1].toLowerCase(), m[2].toLowerCase()];
+        return ['', q.toLowerCase()];
+    }, [query]);
+
     React.useEffect(() => {
-        if (!query.trim()) {
+        if (!textQuery) {
             setResults({ sales: [], customers: [], vehicles: [] });
             return;
         }
         let cancelled = false;
         setLoading(true);
-        const q = query.trim().toLowerCase();
+        const q = textQuery;
+        const searchSales = prefix === '' || prefix === 's';
+        const searchCust  = prefix === '' || prefix === 'c';
+        const searchVeh   = prefix === '' || prefix === 'v';
         Promise.all([
-            api.get('/sales/',     { params: { page_size: 1000 } }),
-            api.get('/customers/', { params: { page_size: 1000 } }),
-            api.get('/vehicles/',  { params: { page_size: 1000 } }),
+            searchSales ? api.get('/sales/',     { params: { page_size: 1000 } }) : Promise.resolve({ data: [] }),
+            searchCust  ? api.get('/customers/', { params: { page_size: 1000 } }) : Promise.resolve({ data: [] }),
+            searchVeh   ? api.get('/vehicles/',  { params: { page_size: 1000 } }) : Promise.resolve({ data: [] }),
         ]).then(([s, c, v]) => {
             if (cancelled) return;
-            const sales = (s.data.results || s.data).filter(x =>
+            const sales = searchSales ? (s.data.results || s.data || []).filter(x =>
                 (x.sale_number || '').toLowerCase().includes(q) ||
                 (x.customer_name || '').toLowerCase().includes(q) ||
                 (x.vehicle_info || '').toLowerCase().includes(q) ||
                 (x.vehicle_vin || '').toLowerCase().includes(q)
-            ).slice(0, 5);
-            const customers = (c.data.results || c.data).filter(x =>
+            ).slice(0, 5) : [];
+            const customers = searchCust ? (c.data.results || c.data || []).filter(x =>
                 `${x.first_name} ${x.last_name}`.toLowerCase().includes(q) ||
                 (x.document_number || '').toLowerCase().includes(q)
-            ).slice(0, 5);
-            const vehicles = (v.data.results || v.data).filter(x =>
+            ).slice(0, 5) : [];
+            const vehicles = searchVeh ? (v.data.results || v.data || []).filter(x =>
                 (x.vin || '').toLowerCase().includes(q) ||
                 (x.brand_name || '').toLowerCase().includes(q) ||
                 (x.model_name || '').toLowerCase().includes(q)
-            ).slice(0, 5);
+            ).slice(0, 5) : [];
             setResults({ sales, customers, vehicles });
         }).finally(() => !cancelled && setLoading(false));
         return () => { cancelled = true; };
-    }, [query]);
+    }, [textQuery, prefix]);
 
     return (
         <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-start justify-center pt-20 px-4"
@@ -117,9 +129,18 @@ function GlobalSearch({ onClose }) {
                     autoFocus
                     value={query}
                     onChange={e => setQuery(e.target.value)}
-                    placeholder="Buscar ventas, clientes, vehículos..."
+                    placeholder="Buscar... (usá 'v vin', 'c nombre' o 's numero' para filtrar)"
                     className="w-full px-4 py-3 border-b text-base focus:outline-none"
                 />
+                {prefix && (
+                    <div className="px-4 py-1.5 bg-blue-50 text-blue-800 text-xs border-b">
+                        Filtro activo: <strong>{
+                            prefix === 'v' ? 'Solo vehículos' :
+                            prefix === 'c' ? 'Solo clientes' :
+                            'Solo ventas'
+                        }</strong>
+                    </div>
+                )}
                 <div className="overflow-y-auto flex-1">
                     {!query && (
                         <div className="p-6 text-center text-gray-500 text-sm">

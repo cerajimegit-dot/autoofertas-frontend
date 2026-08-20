@@ -141,6 +141,22 @@ function Sales() {
         await loadCatalogs();
         setShowCreateSale(true);
     }
+
+    // Deep-link: abrir modal si viene ?new=1 desde /vehicles (botón 💰 vender)
+    const [preselectVehicleId, setPreselectVehicleId] = useState('');
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('new') === '1') {
+            const vehId = params.get('vehicle') || '';
+            setPreselectVehicleId(vehId);
+            openCreateSale();
+            // limpiar query para no reabrir al navegar
+            const url = new URL(window.location.href);
+            url.searchParams.delete('new');
+            url.searchParams.delete('vehicle');
+            window.history.replaceState({}, '', url.toString());
+        }
+    }, []); // eslint-disable-line
     async function openEditSaleWithCatalogs(sale) {
         await loadCatalogs();
         openEditSale(sale);
@@ -699,7 +715,8 @@ function Sales() {
                     vehicles={vehicles}
                     brands={brands}
                     paymentForms={paymentForms}
-                    onClose={() => setShowCreateSale(false)}
+                    preselectVehicleId={preselectVehicleId}
+                    onClose={() => { setShowCreateSale(false); setPreselectVehicleId(''); }}
                     onCreated={async (sale) => {
                         setShowCreateSale(false);
                         // El POST ya devuelve la venta completa — no hace falta
@@ -1115,7 +1132,7 @@ function VehicleCreateModal({ brands: initialBrands, onClose, onCreated }) {
 }
 
 /* ---------- Crear venta nueva ---------- */
-function SaleCreateModal({ customers, vehicles, brands, paymentForms, onClose, onCreated }) {
+function SaleCreateModal({ customers, vehicles, brands, paymentForms, preselectVehicleId = '', onClose, onCreated }) {
     const todayStr = new Date().toISOString().slice(0, 10);
 
     const [form, setForm] = React.useState({
@@ -1123,7 +1140,7 @@ function SaleCreateModal({ customers, vehicles, brands, paymentForms, onClose, o
         sale_date: todayStr,
         payment_date: '',   // opcional: fecha real del cobro / entrega (para flujo caja)
         customer: '',
-        vehicle: '',
+        vehicle: preselectVehicleId || '',   // pre-seleccion via deep-link
         unit_price: '',
         discount: '0',
         down_payment: '0',
@@ -1300,15 +1317,41 @@ function SaleCreateModal({ customers, vehicles, brands, paymentForms, onClose, o
                                 className="w-full px-3 py-2 border rounded" />
                         </Field>
                     </Grid>
-                    <div className="mt-3 p-3 bg-slate-50 rounded text-sm">
+                    {/* Balance de operación — resumen antes de guardar */}
+                    <div className="mt-3 p-4 bg-slate-50 border border-slate-200 rounded space-y-1.5 text-sm">
+                        <div className="text-xs uppercase text-slate-500 font-semibold mb-1">
+                            Balance de la operación
+                        </div>
                         <div className="flex justify-between">
-                            <span>Total de la venta:</span>
+                            <span>Precio unitario:</span>
+                            <span>{formatGs(Number(form.unit_price) || 0)}</span>
+                        </div>
+                        {Number(form.discount) > 0 && (
+                            <div className="flex justify-between text-gray-600">
+                                <span>Descuento:</span>
+                                <span>−{formatGs(Number(form.discount))}</span>
+                            </div>
+                        )}
+                        <div className="flex justify-between border-t border-slate-300 pt-1.5 font-medium">
+                            <span>Total venta:</span>
                             <strong>{formatGs(totalPrice)}</strong>
                         </div>
                         {Number(form.down_payment) > 0 && (
-                            <div className="flex justify-between text-gray-700 mt-1">
-                                <span>A financiar en cuotas:</span>
-                                <strong>{formatGs(aFinanciar)}</strong>
+                            <>
+                                <div className="flex justify-between text-gray-600">
+                                    <span>Entrega inicial:</span>
+                                    <span>−{formatGs(Number(form.down_payment))}</span>
+                                </div>
+                                <div className="flex justify-between border-t border-slate-300 pt-1.5 font-semibold text-red-700">
+                                    <span>A financiar en cuotas:</span>
+                                    <strong>{formatGs(aFinanciar)}</strong>
+                                </div>
+                            </>
+                        )}
+                        {form.payment_date && form.payment_date !== form.sale_date && (
+                            <div className="mt-2 pt-2 border-t border-slate-300 text-xs text-slate-600">
+                                💡 El cobro se registrará en el flujo caja del {formatDate(form.payment_date)},
+                                distinto a la fecha de la venta ({formatDate(form.sale_date)}).
                             </div>
                         )}
                     </div>

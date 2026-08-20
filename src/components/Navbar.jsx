@@ -119,8 +119,9 @@ function Navbar({ onLogout }) {
                         </div>
                     )}
 
-                    {/* Derecha: ayuda + usuario */}
+                    {/* Derecha: notificaciones + ayuda + usuario */}
                     <div className="flex items-center gap-2" ref={menuRef}>
+                        <NotificationBell />
                         <button
                             type="button"
                             onClick={() => window.dispatchEvent(new Event('shortcuts:open'))}

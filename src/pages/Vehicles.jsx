@@ -305,10 +305,12 @@ function Vehicles() {
                     columns={[
                         { key: 'mm',     label: 'Marca / Modelo', primary: true,
                           render: v => (
-                              <div>
+                              <button type="button"
+                                  onClick={() => history.push(`/vehicles/${v.id}`)}
+                                  className="text-left hover:underline w-full">
                                   <div className="font-semibold">{v.brand_name} {v.model_name}</div>
                                   <div className="text-xs text-gray-500">{v.year} · {v.color || 'sin color'}</div>
-                              </div>
+                              </button>
                           ) },
                         { key: 'vin',    label: 'Chasis (VIN)', render: v => (
                               <div className="flex items-center gap-2">
