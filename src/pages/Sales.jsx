@@ -318,10 +318,25 @@ function Sales() {
     }
     function closeQuotas() { setQuotasSale(null); setQuotas([]); }
     async function markQuotaPaid(quotaId) {
+        // Preguntar por la fecha REAL del cobro. Antes se enviaba sin fecha
+        // y el backend usaba `datetime.now()` — problema al cargar cuotas
+        // atrasadas o pagos viejos: la fecha en el flujo caja quedaba mal.
+        const q = quotas.find(x => x.id === quotaId);
+        const defaultDate = (q?.due_date && String(q.due_date).slice(0,10))
+            || new Date().toISOString().slice(0,10);
+        const pd = window.prompt(
+            'Fecha del cobro (YYYY-MM-DD).\n\nDejar en blanco para usar hoy.',
+            defaultDate,
+        );
+        if (pd === null) return;   // usuario canceló
+        const payload = pd.trim() ? { payment_date: pd.trim() } : {};
         try {
-            await api.post(`/quotas/${quotaId}/mark_as_paid/`);
+            await api.post(`/quotas/${quotaId}/mark_as_paid/`, payload);
             await openQuotas(quotasSale);
-        } catch (err) { toast.error('No se pudo marcar como pagada', err.response?.data?.detail || err.message); }
+            toast.success('Cuota marcada como pagada');
+        } catch (err) {
+            toast.error('No se pudo marcar como pagada', err.response?.data?.detail || err.message);
+        }
     }
     async function updateQuota(quotaId, patch) {
         try {
