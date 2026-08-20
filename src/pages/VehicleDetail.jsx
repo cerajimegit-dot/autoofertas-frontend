@@ -105,6 +105,11 @@ function VehicleDetail() {
                 </div>
             </div>
 
+            {/* Galería de fotos */}
+            <Card className="mb-4">
+                <VehicleGallery vehicleId={v.id} />
+            </Card>
+
             {/* Grid principal */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 {/* Ficha técnica */}

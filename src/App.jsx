@@ -45,6 +45,11 @@ function App() {
         <BrowserRouter>
             <KeyboardShortcutsProvider>
             <Switch>
+                {/* Ruta pública del catálogo (SIN autenticación) */}
+                <Route exact path="/catalogo/:slug">
+                    <CatalogoPublico />
+                </Route>
+
                 {/* Ruta de login */}
                 <Route exact path="/login">
                     <Login />

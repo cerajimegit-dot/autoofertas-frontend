@@ -169,7 +169,18 @@ function Vehicles() {
                         {' '}· Valor total filtrado: <strong>{formatGs(totalValor)}</strong>
                     </p>
                 </div>
-                <Button variant="secondary" onClick={fetchVehicles}>↻ Refrescar</Button>
+                <div className="flex gap-2">
+                    <button type="button"
+                        onClick={() => {
+                            const url = `${window.location.origin}/catalogo/auto-ofertas`;
+                            navigator.clipboard.writeText(url).then(() =>
+                                toast.success('Link del catálogo copiado. Compartilo por WhatsApp.'));
+                        }}
+                        className="px-3 py-2 border border-emerald-300 text-emerald-700 rounded hover:bg-emerald-50 text-sm">
+                        🔗 Compartir catálogo público
+                    </button>
+                    <Button variant="secondary" onClick={fetchVehicles}>↻ Refrescar</Button>
+                </div>
             </div>
 
             {error && <div className="bg-red-50 text-red-600 p-4 rounded-lg mb-4">{error}</div>}
