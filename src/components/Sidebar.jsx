@@ -17,6 +17,22 @@ function Sidebar({ className = '' }) {
     const location = useLocation();
     const isAdmin = user && (user.role === 'admin' || user.is_superuser);
 
+    // Favoritos por usuario — pinnados en el sidebar (localStorage)
+    const favKey = `sidebar_favs_${user?.id || 'guest'}`;
+    const [favorites, setFavorites] = React.useState(() => {
+        try { return JSON.parse(localStorage.getItem(favKey) || '[]'); }
+        catch { return []; }
+    });
+    const toggleFav = (path) => {
+        setFavorites(prev => {
+            const next = prev.includes(path)
+                ? prev.filter(p => p !== path)
+                : [...prev, path];
+            localStorage.setItem(favKey, JSON.stringify(next));
+            return next;
+        });
+    };
+
     // Escuchar el toggle global desde el Navbar
     React.useEffect(() => {
         const onToggle = () => setMobileOpen(o => !o);
@@ -68,21 +84,57 @@ function Sidebar({ className = '' }) {
                     </button>
 
                     <nav className="space-y-1">
+                        {/* Sección Favoritos — solo si hay */}
+                        {favorites.length > 0 && (!collapsed || mobileOpen) && (
+                            <>
+                                <div className="text-xs uppercase text-gray-400 px-3 pt-2 pb-1">⭐ Favoritos</div>
+                                {favorites.map(favPath => {
+                                    const item = menuItems.find(m => m.path === favPath);
+                                    if (!item) return null;
+                                    const active = isActive(item.path);
+                                    return (
+                                        <Link key={`fav-${item.path}`} to={item.path}
+                                            className={`flex items-center gap-3 p-3 rounded-lg transition-colors text-sm font-medium ${
+                                                active ? 'bg-red-600 text-white' : 'hover:bg-gray-800'
+                                            }`}>
+                                            <span className="text-lg">{item.icon}</span>
+                                            <span>{item.name}</span>
+                                        </Link>
+                                    );
+                                })}
+                                <div className="border-t border-gray-700 my-2" />
+                            </>
+                        )}
+
+                        {/* Todos los items */}
                         {menuItems.map(item => {
                             const active = isActive(item.path);
+                            const isFav = favorites.includes(item.path);
                             return (
-                                <Link
-                                    key={item.path}
-                                    to={item.path}
-                                    className={`
-                                        flex items-center gap-3 p-3 rounded-lg transition-colors text-sm font-medium
-                                        ${active ? 'bg-red-600 text-white' : 'hover:bg-gray-800'}
-                                        ${item.adminOnly ? 'border-t border-gray-700 mt-2 pt-3' : ''}
-                                    `}
-                                >
-                                    <span className="text-lg">{item.icon}</span>
-                                    {(!collapsed || mobileOpen) && <span>{item.name}</span>}
-                                </Link>
+                                <div key={item.path} className="group relative">
+                                    <Link
+                                        to={item.path}
+                                        className={`
+                                            flex items-center gap-3 p-3 rounded-lg transition-colors text-sm font-medium
+                                            ${active ? 'bg-red-600 text-white' : 'hover:bg-gray-800'}
+                                            ${item.adminOnly ? 'border-t border-gray-700 mt-2 pt-3' : ''}
+                                        `}
+                                    >
+                                        <span className="text-lg">{item.icon}</span>
+                                        {(!collapsed || mobileOpen) && <span className="flex-1">{item.name}</span>}
+                                    </Link>
+                                    {(!collapsed || mobileOpen) && (
+                                        <button
+                                            onClick={(e) => { e.preventDefault(); toggleFav(item.path); }}
+                                            className={`absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 hover:scale-110 transition text-lg ${
+                                                isFav ? 'opacity-100 text-yellow-400' : 'text-gray-400'
+                                            }`}
+                                            title={isFav ? 'Quitar de favoritos' : 'Agregar a favoritos'}
+                                        >
+                                            {isFav ? '⭐' : '☆'}
+                                        </button>
+                                    )}
+                                </div>
                             );
                         })}
                     </nav>

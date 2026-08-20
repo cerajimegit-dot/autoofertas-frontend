@@ -169,29 +169,63 @@ function SearchSection({ title, items, renderItem, onClick }) {
 
 /* ---------- Ayuda de atajos ---------- */
 function ShortcutsHelp({ onClose }) {
-    const shortcuts = [
-        { keys: ['Ctrl', 'K'],     desc: 'Buscar venta, cliente o vehículo' },
-        { keys: ['?'],             desc: 'Abrir esta ayuda' },
-        { keys: ['Esc'],           desc: 'Cerrar la ventana actual' },
+    const sections = [
+        {
+            title: 'Navegación',
+            items: [
+                { keys: ['Ctrl', 'K'], desc: 'Buscar ventas, clientes o vehículos' },
+                { keys: ['?'],         desc: 'Abrir esta ayuda' },
+                { keys: ['Esc'],       desc: 'Cerrar la ventana actual' },
+            ],
+        },
+        {
+            title: 'Impresión',
+            items: [
+                { keys: ['🖨'],  desc: 'Botón "Imprimir" en ficha de vehículo → hoja A4' },
+                { keys: ['Ctrl', 'P'], desc: 'Imprimir pantalla actual (browser)' },
+            ],
+        },
+        {
+            title: 'WhatsApp',
+            items: [
+                { keys: ['📱'], desc: 'Botón en fila de vehículo → compartir por WA' },
+                { keys: ['📱'], desc: 'Botón en cuota vencida → recordar cliente por WA' },
+            ],
+        },
+        {
+            title: 'Tips',
+            items: [
+                { keys: ['⭐'], desc: 'Hover en Sidebar → agregar página a favoritos' },
+                { keys: ['💱'], desc: 'Chip USD en Navbar → ver cotización del día' },
+                { keys: ['🔗'], desc: 'Los filtros en URL se pueden compartir' },
+            ],
+        },
     ];
     return (
         <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center px-4"
              onClick={onClose}>
-            <div className="bg-white rounded-lg shadow-2xl w-full max-w-md"
+            <div className="bg-white rounded-lg shadow-2xl w-full max-w-lg max-h-[80vh] overflow-y-auto"
                  onClick={e => e.stopPropagation()}>
-                <div className="flex justify-between items-center p-4 border-b">
-                    <h2 className="font-semibold">Atajos de teclado</h2>
+                <div className="flex justify-between items-center p-4 border-b sticky top-0 bg-white">
+                    <h2 className="font-semibold">Atajos y tips</h2>
                     <button onClick={onClose} className="text-gray-500 hover:text-gray-700 text-2xl leading-none">×</button>
                 </div>
-                <div className="p-4 space-y-2">
-                    {shortcuts.map((s, i) => (
-                        <div key={i} className="flex items-center justify-between text-sm">
-                            <span className="text-gray-700">{s.desc}</span>
-                            <span className="flex gap-1">
-                                {s.keys.map((k, j) => (
-                                    <kbd key={j} className="px-2 py-0.5 bg-gray-100 border border-gray-300 rounded text-xs font-mono">{k}</kbd>
+                <div className="p-4 space-y-4">
+                    {sections.map((sec) => (
+                        <div key={sec.title}>
+                            <h3 className="text-xs uppercase text-gray-500 font-medium mb-2">{sec.title}</h3>
+                            <div className="space-y-1.5">
+                                {sec.items.map((s, i) => (
+                                    <div key={i} className="flex items-center justify-between text-sm">
+                                        <span className="text-gray-700">{s.desc}</span>
+                                        <span className="flex gap-1 shrink-0 ml-2">
+                                            {s.keys.map((k, j) => (
+                                                <kbd key={j} className="px-2 py-0.5 bg-gray-100 border border-gray-300 rounded text-xs font-mono">{k}</kbd>
+                                            ))}
+                                        </span>
+                                    </div>
                                 ))}
-                            </span>
+                            </div>
                         </div>
                     ))}
                 </div>

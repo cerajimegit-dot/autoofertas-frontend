@@ -20,18 +20,18 @@ function Vehicles() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
 
-    // Filtros
-    const [search, setSearch] = useState('');
+    // Filtros — persistidos en URL para poder compartir/bookmarkear
+    const [search, setSearch] = useUrlState('q', '');
     // Por defecto arrancamos en "Disponibles": es lo que el vendedor necesita ver
     // primero ("¿qué tengo para ofrecer?"). Para revisar vendidos se cambia el chip.
-    const [stateFilter, setStateFilter] = useState('available');
-    const [brand, setBrand] = useState('');
-    const [model, setModel] = useState('');
-    const [yearFrom, setYearFrom] = useState('');
-    const [yearTo, setYearTo] = useState('');
-    const [color, setColor] = useState('');
-    const [priceFrom, setPriceFrom] = useState('');
-    const [priceTo, setPriceTo] = useState('');
+    const [stateFilter, setStateFilter] = useUrlState('state', 'available');
+    const [brand, setBrand] = useUrlState('brand', '');
+    const [model, setModel] = useUrlState('model', '');
+    const [yearFrom, setYearFrom] = useUrlState('yearFrom', '');
+    const [yearTo, setYearTo] = useUrlState('yearTo', '');
+    const [color, setColor] = useUrlState('color', '');
+    const [priceFrom, setPriceFrom] = useUrlState('priceFrom', '');
+    const [priceTo, setPriceTo] = useUrlState('priceTo', '');
 
     const { selectedBranch, branches } = useBranch();
 
