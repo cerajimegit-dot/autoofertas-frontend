@@ -36,6 +36,10 @@ function Vehicles() {
     // Filtros de inconsistencias (chip)
     const [quality, setQuality] = useState('all'); // all | sin_precio | vin_basura | inconsistente
 
+    // Modal de edicion
+    const [editing, setEditing] = useState(null);
+    const { toast } = useToast();
+
     useEffect(() => { fetchVehicles(); }, [selectedBranch]);
 
     async function fetchVehicles() {
@@ -328,6 +332,13 @@ function Vehicles() {
                                   : <span className="font-semibold">{formatGs(v.price)}</span>
                           ) },
                         { key: 'state',  label: 'Estado', render: v => vehicleStateBadge(v.state, v.state_display) },
+                        { key: 'actions', label: '', render: v => (
+                              <button type="button" onClick={() => setEditing(v)}
+                                  className="px-3 py-1 text-xs border border-gray-300 rounded hover:bg-gray-100"
+                                  title="Editar vehículo">
+                                  ✏ Editar
+                              </button>
+                          ) },
                     ]}
                     emptyState={
                         filtersActive
@@ -340,6 +351,150 @@ function Vehicles() {
                     }
                 />
             </Card>
+
+            {editing && (
+                <VehicleEditModal
+                    vehicle={editing}
+                    onClose={() => setEditing(null)}
+                    onSaved={(updated) => {
+                        setVehicles(prev => prev.map(x => x.id === updated.id ? { ...x, ...updated } : x));
+                        setEditing(null);
+                        toast.success(`${updated.brand_name} ${updated.model_name} actualizado`);
+                    }}
+                />
+            )}
+        </div>
+    );
+}
+
+/* ---------- Modal de edicion de vehiculo ---------- */
+function VehicleEditModal({ vehicle, onClose, onSaved }) {
+    const [form, setForm] = React.useState({
+        vin:           vehicle.vin || '',
+        license_plate: vehicle.license_plate || '',
+        color:         vehicle.color || '',
+        year:          vehicle.year || '',
+        mileage:       vehicle.mileage || 0,
+        price:         vehicle.price || 0,
+        state:         vehicle.state || 'available',
+        description:   vehicle.description || '',
+    });
+    const [saving, setSaving] = React.useState(false);
+    const [errorText, setErrorText] = React.useState('');
+    const set = (k, v) => setForm(prev => ({ ...prev, [k]: v }));
+
+    async function save(e) {
+        e.preventDefault();
+        setSaving(true); setErrorText('');
+        try {
+            const payload = {
+                vin: form.vin.trim(),
+                license_plate: form.license_plate.trim(),
+                color: form.color.trim(),
+                year: Number(form.year) || 0,
+                mileage: Number(form.mileage) || 0,
+                price: Number(form.price) || 0,
+                state: form.state,
+                description: form.description,
+            };
+            const res = await apiClient.updateVehicle(vehicle.id, payload);
+            onSaved(res.data);
+        } catch (err) {
+            setErrorText(err.response?.data?.detail || JSON.stringify(err.response?.data || err.message));
+        } finally {
+            setSaving(false);
+        }
+    }
+
+    return (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4"
+             onClick={onClose}>
+            <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+                 onClick={e => e.stopPropagation()}>
+                <div className="flex items-center justify-between px-5 py-3 border-b">
+                    <div>
+                        <div className="text-xs text-gray-500">Editar vehículo</div>
+                        <div className="font-semibold">
+                            {vehicle.brand_name} {vehicle.model_name} {vehicle.year}
+                        </div>
+                    </div>
+                    <button onClick={onClose} className="text-gray-400 hover:text-gray-700 text-2xl">×</button>
+                </div>
+
+                <form onSubmit={save} className="p-5 space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Chasis (VIN) *</label>
+                            <input type="text" value={form.vin}
+                                onChange={e => set('vin', e.target.value)}
+                                className="w-full px-3 py-2 border rounded font-mono text-sm" required />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Patente</label>
+                            <input type="text" value={form.license_plate}
+                                onChange={e => set('license_plate', e.target.value)}
+                                className="w-full px-3 py-2 border rounded" />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Color</label>
+                            <input type="text" value={form.color}
+                                onChange={e => set('color', e.target.value)}
+                                className="w-full px-3 py-2 border rounded" />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Año</label>
+                            <input type="number" value={form.year}
+                                onChange={e => set('year', e.target.value)}
+                                className="w-full px-3 py-2 border rounded" />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Kilometraje</label>
+                            <input type="number" min="0" value={form.mileage}
+                                onChange={e => set('mileage', e.target.value)}
+                                className="w-full px-3 py-2 border rounded" />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Precio (Gs.) {Number(form.price) === 0 && (
+                                    <span className="text-red-600 text-xs">⚠ Sin precio</span>
+                                )}
+                            </label>
+                            <input type="number" min="0" value={form.price}
+                                onChange={e => set('price', e.target.value)}
+                                className="w-full px-3 py-2 border rounded" />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Estado</label>
+                            <select value={form.state}
+                                onChange={e => set('state', e.target.value)}
+                                className="w-full px-3 py-2 border rounded">
+                                <option value="available">Disponible</option>
+                                <option value="reserved">Reservado</option>
+                                <option value="sold">Vendido</option>
+                                <option value="maintenance">Mantenimiento</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Descripción / Notas</label>
+                        <textarea value={form.description}
+                            onChange={e => set('description', e.target.value)}
+                            rows={2}
+                            className="w-full px-3 py-2 border rounded text-sm" />
+                    </div>
+
+                    {errorText && (
+                        <div className="bg-red-50 text-red-700 px-3 py-2 rounded text-sm">{errorText}</div>
+                    )}
+
+                    <div className="flex justify-end gap-2 pt-2 border-t">
+                        <Button type="button" variant="secondary" onClick={onClose}>Cancelar</Button>
+                        <Button type="submit" disabled={saving}>
+                            {saving ? 'Guardando...' : 'Guardar cambios'}
+                        </Button>
+                    </div>
+                </form>
+            </div>
         </div>
     );
 }
