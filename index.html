@@ -92,8 +92,12 @@
            Ocultan la UI (navbar, sidebar, botones) y muestran solo
            `.print-only` en blanco/negro estilo A4. Cada página que
            necesite imprimir renderiza su template con class="print-only".
+
+           `!important` en display:none porque Tailwind puede aplicar
+           reglas con mayor specificity (block/flex/etc) en el mismo
+           elemento y sobrescribir esta regla sin el important.
         */
-        .print-only { display: none; }
+        .print-only { display: none !important; }
         @media print {
             body {
                 background: white !important;

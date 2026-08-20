@@ -371,7 +371,10 @@ function Vehicles() {
                                   <button type="button"
                                       onClick={() => {
                                           setPrintVehicle(v);
-                                          setTimeout(() => window.print(), 100);
+                                          setTimeout(() => {
+                                              window.print();
+                                              setPrintVehicle(null);
+                                          }, 150);
                                       }}
                                       className="w-8 h-8 flex items-center justify-center border border-gray-300 rounded hover:bg-gray-100"
                                       title="Imprimir ficha">🖨</button>
